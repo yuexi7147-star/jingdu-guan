@@ -26,13 +26,15 @@ class PlayerViewModel : ViewModel() {
         val positionMs: Long = 0,
         val durationMs: Long = 0,
         val speed: Float = 1f,
+        /** 防盗链要的 Referer：从哪个网页嗅到的地址，就用那个站当来源 */
+        val referer: String? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
-    fun prepare(url: String, title: String, subtitle: String = "") {
-        _state.value = _state.value.copy(url = url, title = title, subtitle = subtitle, error = null)
+    fun prepare(url: String, title: String, subtitle: String = "", referer: String? = null) {
+        _state.value = _state.value.copy(url = url, title = title, subtitle = subtitle, referer = referer, error = null)
     }
 
     fun setPlaying(v: Boolean) {

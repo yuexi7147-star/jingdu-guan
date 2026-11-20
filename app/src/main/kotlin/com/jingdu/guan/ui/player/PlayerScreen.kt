@@ -90,9 +90,23 @@ fun PlayerScreen(
     }
 
     // 准备并恢复上次进度
-    LaunchedEffect(state.url) {
+    LaunchedEffect(state.url, state.referer) {
         if (state.url.isNotBlank()) {
-            player.setMediaItem(MediaItem.fromUri(state.url))
+            // 防盗链：不少站的媒体地址只认自己网页来的请求，不带头就 403
+            val headers = state.referer?.takeIf { it.isNotBlank() }?.let(mapOf("Referer" to it)).orEmpty()
+            val ds = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                .setUserAgent("Mozilla/5.0 (Linux; Android 14)")
+                .setDefaultRequestProperties(headers)
+                .setAllowCrossProtocolRedirects(true)
+
+            val item = MediaItem.fromUri(state.url)
+            val isHls = state.url.contains(".m3u8", ignoreCase = true)
+            val source = if (isHls) {
+                androidx.media3.exoplayer.hls.HlsMediaSource.Factory(ds).createMediaSource(item)
+            } else {
+                androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(ds).createMediaSource(item)
+            }
+            player.setMediaSource(source)
             player.prepare()
             val last = viewModel.lastPosition(context, state.url)
             if (last > 5_000) player.seekTo(last)
