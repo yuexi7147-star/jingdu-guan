@@ -167,6 +167,7 @@ val appModule = module {
     // 整本缓存同理：离开详情页照常跑
     single { com.jingdu.guan.data.repo.OfflineDownloader(get(), get(), get(), get(), get()) }
     viewModel { SourceManageViewModel(androidContext(), get(), get(), get(), get()) }
+    viewModel { com.jingdu.guan.ui.market.SourceMarketViewModel(get(), get()) }
     viewModel { (sourceId: String) -> SourceDetailViewModel(sourceId, get(), get(), get()) }
     viewModel { com.jingdu.guan.ui.sourcewizard.SourceWizardViewModel(get(), get(), get(), get()) }
     viewModel { WebDavViewModel(get(), get(), get(), get()) }
