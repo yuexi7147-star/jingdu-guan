@@ -13,11 +13,7 @@ import okhttp3.Request
  */
 class RssSourceMarket(private val http: OkHttpClient) {
 
-    data class Entry(
-        val id: String,
-        val name: String,
-        val url: String,
-    )
+    data class Entry(val id: String, val name: String, val url: String)
 
     suspend fun fetchPage(page: Int = 1): Result<List<Entry>> = withContext(Dispatchers.IO) {
         runCatching {
@@ -34,17 +30,8 @@ class RssSourceMarket(private val http: OkHttpClient) {
         }
     }
 
-    /**
-     * 从 HTML 里抠出 (id, 名称, 地址)。
-     *
-     * 结构是 <a href="/yuedu/rss/content/id/193">源仓库(官方纯净) http://yckceo.vip</a>，
-     * 名称和地址挤在同一段文字里，中间可能是空格或多个空格。
-     */
     private fun parse(html: String): List<Entry> {
-        val re = Regex(
-            "<a[^>]*href=\"/yuedu/rss/content/id/(\\d+)\"[^>]*>(.*?)</a>",
-            RegexOption.DOT_MATCHES_ALL or RegexOption.IGNORE_CASE,
-        )
+        val re = Regex("<a[^>]*href=\"/yuedu/rss/content/id/(\\d+)\"[^>]*>(.*?)</a>")
         val out = LinkedHashMap<String, Entry>()
         for (m in re.findAll(html)) {
             val id = m.groupValues[1]
@@ -55,16 +42,15 @@ class RssSourceMarket(private val http: OkHttpClient) {
                 .replace(Regex("\\s+"), " ")
                 .trim()
             if (raw.isEmpty()) continue
-            val urlIdx = raw.indexOfFirst { raw.startsWith("http", it) }
+            val urlIdx = raw.indexOf("http")
             val name = if (urlIdx > 0) raw.substring(0, urlIdx).trim() else raw
-            val url = if (urlIdx > 0) raw.substring(urlIdx).trim().substringBefore(' ') else ""
+            val url = if (urlIdx >= 0) raw.substring(urlIdx).trim().substringBefore(' ') else ""
             if (name.isEmpty()) continue
             out[id] = Entry(id, name, url)
         }
         return out.values.toList()
     }
 
-    /** 抓单个源的完整 JSON（用于真正导入） */
     suspend fun fetchSourceJson(id: String): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             val req = Request.Builder()
