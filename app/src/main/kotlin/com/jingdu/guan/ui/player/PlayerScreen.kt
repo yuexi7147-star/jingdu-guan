@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,6 +64,7 @@ fun PlayerScreen(
     val player = remember { ExoPlayer.Builder(context).build().apply { playWhenReady = true } }
     var hud by remember { mutableStateOf<String?>(null) }
     var dragAccum by remember { mutableFloatStateOf(0f) }
+    var startPosMs by remember { mutableLongStateOf(0L) }
 
     DisposableEffect(Unit) {
         val listener = object : Player.Listener {
@@ -133,7 +135,7 @@ fun PlayerScreen(
                     }
                     .pointerInput(state.url) {
                         detectDragGestures(
-                            onDragStart = { dragAccum = 0f },
+                            onDragStart = { dragAccum = 0f; startPosMs = player.currentPosition },
                             onDragEnd = { hud = null },
                             onDrag = { change, drag ->
                                 change.consume()
@@ -144,10 +146,11 @@ fun PlayerScreen(
                                 if (kotlin.math.abs(dragAccum) > kotlin.math.abs(drag.y) * 3) {
                                     val dur = player.duration.coerceAtLeast(0)
                                     if (dur > 0) {
+                                        // 从拖动起点算总位移：在当前位置上反复加，每帧都会跳得更远
                                         val delta = (dragAccum / w * dur * 0.5).toLong()
-                                        player.seekTo((player.currentPosition + delta).coerceIn(0, dur))
-                                        hud = formatTime(player.currentPosition)
-                                        dragAccum = 0f
+                                        val target = (startPosMs + delta).coerceIn(0, dur)
+                                        player.seekTo(target)
+                                        hud = formatTime(target)
                                     }
                                 } else {
                                     val left = change.position.x < w / 2
@@ -168,7 +171,6 @@ fun PlayerScreen(
                                         am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, next, 0)
                                         hud = "音量 " + (next * 100 / max) + "%"
                                     }
-                                    dragAccum = 0f
                                 }
                             },
                         )
