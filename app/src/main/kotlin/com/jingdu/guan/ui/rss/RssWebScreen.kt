@@ -1,5 +1,11 @@
 package com.jingdu.guan.ui.rss
 
+import com.jingdu.guan.ui.theme.AppShapes
+import com.jingdu.guan.ui.components.Dimens
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.clickable
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.webkit.WebChromeClient
@@ -61,10 +67,34 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
  * - 加载进度是叠在网页顶上的一条线，不放进顶栏 —— 放进顶栏的话它一出一收，顶栏跟着变高变矮，整页网页上下跳。
  * - 主文档打不开（断网、域名失效）盖一层错误态 +「重试」，别留一张 WebView 自己的报错页。
  */
+
+/** 在页面里找一个可播放的直链：video/src/source，以及常见的 m3u8 文本 */
+private const val SNIFF_JS = """
+(function(){
+  try {
+    var v = document.querySelector('video');
+    if (v) {
+      if (v.currentSrc) return v.currentSrc;
+      if (v.src) return v.src;
+      var s = v.querySelectorAll('source');
+      for (var i = 0; i < s.length; i++) { if (s[i].src) return s[i].src; }
+    }
+    var all = document.querySelectorAll('source');
+    for (var j = 0; j < all.length; j++) {
+      var src = all[j].src || '';
+      if (/\.(mp4|m3u8|m4a|mp3|webm)/i.test(src)) return src;
+    }
+    return '';
+  } catch (e) { return ''; }
+})()
+"""
+
 @Composable
 fun RssWebScreen(
     onBack: () -> Unit,
     viewModel: RssWebViewModel,
+    /** 网页里嗅到视频直链时交给播放页；不传就只提示 */
+    onPlay: (url: String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val messages = remember { MessageBus() }
@@ -73,6 +103,8 @@ fun RssWebScreen(
     val links = rememberExternalLinkOpener { messages.emit(NO_BROWSER_MESSAGE) }
 
     var webView by remember { mutableStateOf<WebView?>(null) }
+    // 页面里嗅到的视频直链；非空时顶部出一条「播放」提示
+    var sniffed by remember { mutableStateOf<String?>(null) }
     // 0..100；100 = 这一页加载完了，进度线收起
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -228,6 +260,22 @@ private fun SourceWebView(
                     override fun onProgressChanged(view: WebView, newProgress: Int) {
                         progress(newProgress)
                     }
+
+                    override fun onPageFinished(view: WebView, url: String) {
+                        super.onPageFinished(view, url)
+                        // 视频地址多半是页面脚本跑完才挂上去的，隔一会儿再找两遍
+                        listOf(800L, 2500L, 6000L).forEach { delayMs ->
+                            view.postDelayed({
+                                view.evaluateJavascript(SNIFF_JS) { raw ->
+                                    val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
+                                    if (!v.isNullOrBlank() && v != "null" && v.startsWith("http")) {
+                                        sniffed(v)
+                                    }
+                                }
+                            }, delayMs)
+                        }
+                    }
+
                 }
                 webViewClient = object : WebViewClient() {
                     private val guard = WebViewNetworkGuard()
