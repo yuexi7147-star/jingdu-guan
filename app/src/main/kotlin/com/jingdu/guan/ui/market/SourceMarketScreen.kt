@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.horizontalOnly
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,9 +32,7 @@ import com.jingdu.guan.ui.components.SearchField
 import com.jingdu.guan.ui.components.ToolbarTitle
 import com.jingdu.guan.ui.components.groupedCardItem
 import com.jingdu.guan.ui.components.pageScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.jingdu.guan.ui.components.CardViewport
 import com.jingdu.guan.ui.components.ContentListItem
@@ -79,9 +78,10 @@ fun SourceMarketScreen(
         floatingToolbar = {
             BatchActionBar(
                 visible = !checking,
+                onHeightChange = {},
                 actions = listOf(
                     BatchAction(
-                        icon = top.yukonga.miuix.kmp.icon.MiuixIcons.Refresh,
+                        icon = top.yukonga.miuix.kmp.icon.extended.Refresh,
                         label = "检测",
                         onClick = viewModel::checkAll,
                     ),
@@ -102,7 +102,7 @@ fun SourceMarketScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) { AppLoadingIndicator() }
                 list.isEmpty() -> EmptyState(
-                    icon = top.yukonga.miuix.kmp.icon.MiuixIcons.Search,
+                    icon = top.yukonga.miuix.kmp.icon.extended.Search,
                     title = "没有找到来源",
                     hint = "换个关键词，或下拉刷新",
                     modifier = Modifier.padding(padding),

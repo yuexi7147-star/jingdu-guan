@@ -43,7 +43,7 @@ class RssSourceMarket(private val http: OkHttpClient) {
     private fun parse(html: String): List<Entry> {
         val re = Regex(
             "<a[^>]*href=\"/yuedu/rss/content/id/(\\d+)\"[^>]*>(.*?)</a>",
-            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+            RegexOption.DOT_MATCHES_ALL or RegexOption.IGNORE_CASE,
         )
         val out = LinkedHashMap<String, Entry>()
         for (m in re.findAll(html)) {
