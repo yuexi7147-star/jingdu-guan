@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableStateListOf
 import com.jingdu.guan.ui.theme.AppShapes
 import com.jingdu.guan.ui.components.Dimens
@@ -162,7 +163,7 @@ fun RssWebScreen(
                                 }
                             }
                         }) {
-                            Icon(MiuixIcons.Tune, contentDescription = "嗅探视频")
+                            Icon(MiuixIcons.Search, contentDescription = "嗅探视频")
                         }
                         AppIconButton(onClick = ::reload) {
                             Icon(MiuixIcons.Refresh, contentDescription = "刷新")

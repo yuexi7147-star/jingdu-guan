@@ -93,7 +93,9 @@ fun PlayerScreen(
     LaunchedEffect(state.url, state.referer) {
         if (state.url.isNotBlank()) {
             // 防盗链：不少站的媒体地址只认自己网页来的请求，不带头就 403
-            val headers = state.referer?.takeIf { it.isNotBlank() }?.let(mapOf("Referer" to it)).orEmpty()
+            val ref = state.referer
+            val headers: Map<String, String> =
+                if (!ref.isNullOrBlank()) mapOf("Referer" to ref) else emptyMap()
             val ds = androidx.media3.datasource.DefaultHttpDataSource.Factory()
                 .setUserAgent("Mozilla/5.0 (Linux; Android 14)")
                 .setDefaultRequestProperties(headers)
