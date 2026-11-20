@@ -279,21 +279,6 @@ private fun SourceWebView(
                         progress(newProgress)
                     }
 
-                    override fun onPageFinished(view: WebView, url: String) {
-                        super.onPageFinished(view, url)
-                        // 视频地址多半是页面脚本跑完才挂上去的，隔一会儿再找两遍
-                        listOf(800L, 2500L, 6000L).forEach { delayMs ->
-                            view.postDelayed({
-                                view.evaluateJavascript(SNIFF_JS) { raw ->
-                                    val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
-                                    if (!v.isNullOrBlank() && v != "null" && v.startsWith("http")) {
-                                        sniffed(v)
-                                    }
-                                }
-                            }, delayMs)
-                        }
-                    }
-
                 }
                 webViewClient = object : WebViewClient() {
                     private val guard = WebViewNetworkGuard()
@@ -317,6 +302,22 @@ private fun SourceWebView(
 
                     override fun onPageStarted(view: WebView, startedUrl: String, favicon: Bitmap?) {
                         started(startedUrl)
+                    }
+
+
+                    override fun onPageFinished(view: WebView, url: String) {
+                        super.onPageFinished(view, url)
+                        // 视频地址多半是页面脚本跑完才挂上去的，隔一会儿再找两遍
+                        listOf(800L, 2500L, 6000L).forEach { delayMs ->
+                            view.postDelayed({
+                                view.evaluateJavascript(SNIFF_JS) { raw ->
+                                    val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
+                                    if (!v.isNullOrBlank() && v != "null" && v.startsWith("http")) {
+                                        sniffed(v)
+                                    }
+                                }
+                            }, delayMs)
+                        }
                     }
 
                     override fun doUpdateVisitedHistory(view: WebView, historyUrl: String?, isReload: Boolean) {
