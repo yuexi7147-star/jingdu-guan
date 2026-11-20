@@ -239,6 +239,27 @@ class RssTimelineViewModel(
         return com.jingdu.guan.ui.player.MediaUrlExtractor.extract(html)
     }
 
+
+    /**
+     * 点一条：有视频直链就播，没有就进文章页。
+     *
+     * 分流放在 ViewModel 里 —— 读 description 是 suspend，界面层拿不到 viewModelScope。
+     */
+    fun openOrPlay(
+        item: TimelineItem,
+        onPlay: (url: String, title: String, subtitle: String) -> Unit,
+        onArticle: (RssArticleArgs) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val media = mediaUrlOf(item)
+            if (media != null) {
+                onPlay(media, item.row.title, item.sourceName.orEmpty())
+            } else {
+                onArticle(open(item))
+            }
+        }
+    }
+
     fun open(item: TimelineItem): RssArticleArgs {
         val row = item.row
         viewModelScope.launch { feeds.markRead(row.sourceId, row.articleKey) }

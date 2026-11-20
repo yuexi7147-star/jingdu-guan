@@ -159,15 +159,11 @@ fun RssTimelineScreen(
                         }
                     }
                     timelineItems(state.sections, onOpen = { item ->
-                        viewModel.viewModelScope.launch {
-                            val media = viewModel.mediaUrlOf(item)
-                            if (media != null) {
-                                val sub = listOfNotNull(item.sourceName).joinToString("")
-                                onPlay(media, item.row.title, sub)
-                            } else {
-                                onOpenArticle(viewModel.open(item))
-                            }
-                        }
+                        viewModel.openOrPlay(
+                            item,
+                            onPlay = { url, title, sub -> onPlay(url, title, sub) },
+                            onArticle = onOpenArticle,
+                        )
                     })
                 }
             }
