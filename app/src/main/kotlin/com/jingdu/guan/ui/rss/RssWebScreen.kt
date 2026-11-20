@@ -90,6 +90,15 @@ private const val SNIFF_JS = """
 })()
 """
 
+
+/** 媒体直链：m3u8/mp4 等。分片（.ts）不算 —— 那是流里的一段，不是整片地址 */
+private fun isMediaUrl(url: String): Boolean {
+    val u = url.lowercase()
+    if (u.startsWith("blob:") || u.startsWith("data:") || !u.startsWith("http")) return false
+    return u.contains(".m3u8") || u.contains(".mp4") || u.contains(".m4a") ||
+        u.contains(".mp3") || u.contains(".webm") || u.contains(".flv")
+}
+
 @Composable
 fun RssWebScreen(
     onBack: () -> Unit,
@@ -286,8 +295,12 @@ private fun SourceWebView(
                 webViewClient = object : WebViewClient() {
                     private val guard = WebViewNetworkGuard()
 
-                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-                        guard.intercept(request)
+                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                        // 媒体请求是最可靠的线索：页面怎么播都要把地址发出去，比翻 <video> 标签管用
+                        val u = request.url?.toString().orEmpty()
+                        if (isMediaUrl(u)) onSniff(u)
+                        return guard.intercept(request)
+                    }
 
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         if (guard.blocksNavigation(request)) return true
