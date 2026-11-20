@@ -71,18 +71,19 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 /** 在页面里找一个可播放的直链：video/src/source，以及常见的 m3u8 文本 */
 private const val SNIFF_JS = """
 (function(){
+  function ok(u){ return !!u && /^https?:/i.test(u); }
   try {
     var v = document.querySelector('video');
     if (v) {
-      if (v.currentSrc) return v.currentSrc;
-      if (v.src) return v.src;
+      if (ok(v.currentSrc)) return v.currentSrc;
+      if (ok(v.src)) return v.src;
       var s = v.querySelectorAll('source');
-      for (var i = 0; i < s.length; i++) { if (s[i].src) return s[i].src; }
+      for (var i = 0; i < s.length; i++) { if (ok(s[i].src)) return s[i].src; }
     }
     var all = document.querySelectorAll('source');
     for (var j = 0; j < all.length; j++) {
       var src = all[j].src || '';
-      if (/\.(mp4|m3u8|m4a|mp3|webm)/i.test(src)) return src;
+      if (ok(src) && /\.(mp4|m3u8|m4a|mp3|webm)/i.test(src)) return src;
     }
     return '';
   } catch (e) { return ''; }
