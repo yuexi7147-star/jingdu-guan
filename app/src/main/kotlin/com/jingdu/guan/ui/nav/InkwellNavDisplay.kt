@@ -430,6 +430,7 @@ fun InkwellNavDisplay(
             ) { route ->
                 val vm = koinViewModel<RssTimelineViewModel> { parametersOf(route.sourceId) }
                 RssTimelineScreen(
+                    onPlay = { url, title, sub -> nav.go(PlayerRoute(url, title, sub)) },
                     onBack = { nav.back() },
                     // 从订阅源页点进来的，再点「订阅源」是回去，不是再叠一层
                     onOpenSources = { nav.goOrPop(RssSourceRoute) },

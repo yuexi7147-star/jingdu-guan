@@ -72,6 +72,7 @@ import java.time.LocalDate
  */
 @Composable
 fun RssTimelineScreen(
+    onPlay: (url: String, title: String, subtitle: String) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     onOpenSources: () -> Unit,
     onOpenArticle: (RssArticleArgs) -> Unit,
@@ -157,7 +158,17 @@ fun RssTimelineScreen(
                             )
                         }
                     }
-                    timelineItems(state.sections, onOpen = { onOpenArticle(viewModel.open(it)) })
+                    timelineItems(state.sections, onOpen = { item ->
+                        viewModel.viewModelScope.launch {
+                            val media = viewModel.mediaUrlOf(item)
+                            if (media != null) {
+                                val sub = listOfNotNull(item.sourceName).joinToString("")
+                                onPlay(media, item.row.title, sub)
+                            } else {
+                                onOpenArticle(viewModel.open(item))
+                            }
+                        }
+                    })
                 }
             }
         }

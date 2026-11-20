@@ -226,6 +226,19 @@ class RssTimelineViewModel(
     }
 
     /** 点开一篇：标成读过（标题变灰），返回文章页要的参数。全文不随参数走，文章页按 feed + articleKey 从库里取 */
+
+    /**
+     * 这条能不能直接播：从库里读正文，找视频直链。
+     *
+     * 找不到就给 null，页面照旧进文章页 —— 图文条目本来就没有视频。
+     * 这里只在**点击时**读一次库，列表滚动时不碰 description（那个字段可能有几十 KB）。
+     */
+    suspend fun mediaUrlOf(item: TimelineItem): String? {
+        val row = item.row
+        val html = runCatching { articleDao.getDescription(row.feed, row.articleKey) }.getOrNull()
+        return com.jingdu.guan.ui.player.MediaUrlExtractor.extract(html)
+    }
+
     fun open(item: TimelineItem): RssArticleArgs {
         val row = item.row
         viewModelScope.launch { feeds.markRead(row.sourceId, row.articleKey) }
