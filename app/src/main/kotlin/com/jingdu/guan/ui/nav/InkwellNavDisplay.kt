@@ -105,7 +105,7 @@ fun InkwellNavDisplay(
     externalBook: Intent? = null,
     onExternalBookHandled: (Intent) -> Unit = {},
 ) {
-    val backStack = rememberNavBackStack(BookshelfRoute)
+    val backStack = rememberNavBackStack(RssSourceRoute)
     val nav = remember(backStack) { InkwellNavigator(backStack) }
     LaunchedEffect(backStack) {
         snapshotFlow { backStack.lastOrNull() }.collect { route ->
@@ -116,7 +116,7 @@ fun InkwellNavDisplay(
     val confirmExit = koinInject<AppPrefs>().confirmExitState.collectAsStateWithLifecycle().value ?: false
     val activity = LocalActivity.current
     var showExit by remember { mutableStateOf(false) }
-    BackHandler(confirmExit && backStack.size == 1 && backStack.lastOrNull() == BookshelfRoute) { showExit = true }
+    BackHandler(confirmExit && backStack.size == 1 && backStack.lastOrNull() == RssSourceRoute) { showExit = true }
     if (showExit) {
         AppAlertDialog(
             title = "返回桌面？",
