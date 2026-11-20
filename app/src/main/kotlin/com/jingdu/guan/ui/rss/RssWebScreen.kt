@@ -116,7 +116,7 @@ fun RssWebScreen(
     onBack: () -> Unit,
     viewModel: RssWebViewModel,
     /** 网页里嗅到视频直链时交给播放页；不传就只提示 */
-    onPlay: (url: String) -> Unit = {},
+    onPlay: (url: String, referer: String?) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val messages = remember { MessageBus() }
@@ -219,7 +219,7 @@ fun RssWebScreen(
                                 }
                             }
                         },
-                        onLongPress = { if (sniffed.isNotEmpty()) { onPlay(sniffed.first()); sniffed.clear() } },
+                        onLongPress = { if (sniffed.isNotEmpty()) { onPlay(sniffed.first(), currentUrl); sniffed.clear() } },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(end = Dimens.gapL, bottom = Dimens.gapXXL),
@@ -245,7 +245,7 @@ fun RssWebScreen(
                                     color = MiuixTheme.colorScheme.onPrimary,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { onPlay(u); sniffed.clear() }
+                                        .clickable { onPlay(u, currentUrl); sniffed.clear() }
                                         .padding(vertical = Dimens.gapXS),
                                 )
                             }

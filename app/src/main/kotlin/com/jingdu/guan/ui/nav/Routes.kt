@@ -239,4 +239,6 @@ data class PlayerRoute(
     val url: String,
     val title: String = "",
     val subtitle: String = "",
+    /** 防盗链用的来源页；从网页嗅到的地址要用它 */
+    val referer: String? = null,
 ) : NavKey
