@@ -393,21 +393,11 @@ fun InkwellNavDisplay(
                     onOpenDeveloper = { nav.go(DeveloperSettingsRoute) },
                 )
             }
-            entry<MarketRoute>(
-                metadata = ListDetailSceneStrategy.detailPane(sceneKey = NavPaneGroup.SETTINGS),
-            ) {
-                val mvm = koinViewModel<com.jingdu.guan.ui.market.SourceMarketViewModel>()
-                com.jingdu.guan.ui.market.SourceMarketScreen(
-                    viewModel = mvm,
-                    onBack = { nav.back() },
-                )
-            }
             entry<RssSourceRoute>(
                 metadata = ListDetailSceneStrategy.detailPane(sceneKey = NavPaneGroup.SETTINGS),
             ) {
                 val vm = koinViewModel<RssSourceViewModel>()
                 RssSourceScreen(
-                    onOpenMarket = { nav.go(MarketRoute) },
                     onBack = { nav.back() },
                     // 点一个源 = 只看它的订阅页（同一个页，chip 停在这个源上）
                     onOpenSource = { nav.go(RssTimelineRoute(it)) },

@@ -69,9 +69,6 @@ data object ExploreRoute : NavKey
 @Serializable
 data object RssSourceRoute : NavKey
 
-/** 源市场：从源仓库浏览与批量订阅 */
-data object MarketRoute : NavKey
-
 /**
  * 订阅页：所有开着的订阅源的文章排成一条（书架顶栏的「订阅」）。[sourceId] 非空 = 进来就只看这个源
  * （订阅源页点一个源）；空串 = 全部。不是设置树里的页：书架、订阅源页都能进，进来就是它自己一组（[NavPaneGroup.RSS]）。
