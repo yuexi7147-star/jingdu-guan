@@ -25,6 +25,7 @@ class PlayerViewModel : ViewModel() {
         val error: String? = null,
         val positionMs: Long = 0,
         val durationMs: Long = 0,
+        val speed: Float = 1f,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -52,5 +53,26 @@ class PlayerViewModel : ViewModel() {
 
     fun setPortrait(v: Boolean) {
         _state.value = _state.value.copy(portrait = v)
+    }
+
+    fun setSpeed(v: Float) {
+        _state.value = _state.value.copy(speed = v)
+    }
+
+    /** 进度记忆存本地：按地址存，同一集下次接着看 */
+    fun rememberPosition(context: android.content.Context, url: String, pos: Long) {
+        if (url.isBlank() || pos <= 0) return
+        context.getSharedPreferences("player_pos", android.content.Context.MODE_PRIVATE)
+            .edit().putLong(url.hashCode().toString(), pos).apply()
+    }
+
+    fun lastPosition(context: android.content.Context, url: String): Long {
+        if (url.isBlank()) return 0
+        return context.getSharedPreferences("player_pos", android.content.Context.MODE_PRIVATE)
+            .getLong(url.hashCode().toString(), 0)
+    }
+
+    companion object {
+        val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
     }
 }
