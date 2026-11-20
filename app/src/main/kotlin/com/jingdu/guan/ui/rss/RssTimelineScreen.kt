@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import com.jingdu.guan.ui.theme.AppShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

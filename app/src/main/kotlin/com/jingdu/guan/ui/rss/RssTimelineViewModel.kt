@@ -9,6 +9,7 @@ import com.jingdu.guan.data.repo.RssFeedRepository
 import com.jingdu.guan.data.repo.RssRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -101,7 +102,7 @@ class RssTimelineViewModel(
         }
         searchJob = viewModelScope.launch {
             val rows = runCatching { articleDao.searchByTitle(query.trim()) }.getOrDefault(emptyList())
-            val names = (_ui.value.sources).orEmpty().associate { it.id to it.name }
+            val names = state.value.sources.orEmpty().associate { it.id to it.name }
             _searchResults.value = rows.mapNotNull { r ->
                 val name = names[r.sourceId] ?: return@mapNotNull null
                 TimelineItem(key = r.sourceId + ":" + r.articleKey, row = r, sourceName = name)
