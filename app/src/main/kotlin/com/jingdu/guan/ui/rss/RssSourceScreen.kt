@@ -154,7 +154,6 @@ fun RssSourceScreen(
                     ToolbarTitle("已选 ${selected.size} 个")
                 }
             } else AppToolbar(
-                navigationIcon = { BackButton(onClick = onBack) },
                 containerColor = pageColor,
                 actions = {
                     Box {
