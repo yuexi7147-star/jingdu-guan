@@ -418,7 +418,11 @@ fun InkwellNavDisplay(
             ) { route ->
                 // 后两个参数是文章的原网页才有的地址、标题，单网页源给空（见 AppModules）
                 val vm = koinViewModel<com.jingdu.guan.ui.rss.RssWebViewModel> { parametersOf(route.sourceId, "", "") }
-                com.jingdu.guan.ui.rss.RssWebScreen(onBack = { nav.back() }, viewModel = vm)
+                com.jingdu.guan.ui.rss.RssWebScreen(
+                    onBack = { nav.back() },
+                    viewModel = vm,
+                    onPlay = { url -> nav.go(PlayerRoute(url, "网页视频", "")) },
+                )
             }
             // 订阅自己一组（NavPaneGroup.RSS）：宽屏下订阅页在左、文章在右，原网页再叠一栏。
             // 不挂在设置树里 —— 书架顶栏直接进，手机上返回回书架，不经过设置页
@@ -456,7 +460,11 @@ fun InkwellNavDisplay(
                 val vm = koinViewModel<com.jingdu.guan.ui.rss.RssWebViewModel> {
                     parametersOf(route.sourceId, route.url, route.title)
                 }
-                com.jingdu.guan.ui.rss.RssWebScreen(onBack = { nav.back() }, viewModel = vm)
+                com.jingdu.guan.ui.rss.RssWebScreen(
+                    onBack = { nav.back() },
+                    viewModel = vm,
+                    onPlay = { url -> nav.go(PlayerRoute(url, "网页视频", "")) },
+                )
             }
             entry<ReplaceRuleRoute>(
                 metadata = ListDetailSceneStrategy.extraPane(sceneKey = NavPaneGroup.SETTINGS),
