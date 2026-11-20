@@ -393,6 +393,14 @@ fun InkwellNavDisplay(
                     onOpenDeveloper = { nav.go(DeveloperSettingsRoute) },
                 )
             }
+            entry<PlayerRoute> { key ->
+                val pvm = koinViewModel<com.jingdu.guan.ui.player.PlayerViewModel>()
+                LaunchedEffect(key) { pvm.prepare(key.url, key.title, key.subtitle) }
+                com.jingdu.guan.ui.player.PlayerScreen(
+                    viewModel = pvm,
+                    onBack = { nav.back() },
+                )
+            }
             entry<RssSourceRoute>(
                 metadata = ListDetailSceneStrategy.detailPane(sceneKey = NavPaneGroup.SETTINGS),
             ) {

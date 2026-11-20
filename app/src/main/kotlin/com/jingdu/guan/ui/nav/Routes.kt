@@ -233,3 +233,10 @@ internal fun NavKey.settingsDetailDepth(): Int? = when (this) {
     // 订阅页、文章、文章的原网页不在设置树里：它们是订阅自己的一组（NavPaneGroup.RSS），书架顶栏直接进
     else -> null
 }
+
+/** 播放页：视频与音频共用。地址是直链，绝不带正文（见 RssArticleArgs 大 payload 的理由） */
+data class PlayerRoute(
+    val url: String,
+    val title: String = "",
+    val subtitle: String = "",
+) : NavKey

@@ -174,6 +174,7 @@ val appModule = module {
     viewModel { com.jingdu.guan.ui.replace.ReplaceRuleViewModel(androidContext(), get(), get(), get()) }
     viewModel { com.jingdu.guan.ui.rss.RssSourceViewModel(androidContext(), get(), get()) }
     // 空串 = 看「全部」（Koin 的参数别传 null）
+    viewModel { com.jingdu.guan.ui.player.PlayerViewModel() }
     viewModel { (sourceId: String) -> com.jingdu.guan.ui.rss.RssTimelineViewModel(sourceId.ifBlank { null }, get(), get(), get()) }
     // 后两个：文章的原网页才有的地址、标题；单网页源传空串（参数按位置解构，两个入口都得传满三个）
     viewModel { (sourceId: String, url: String, title: String) ->
