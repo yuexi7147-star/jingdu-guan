@@ -105,7 +105,7 @@ class RssTimelineViewModel(
             val names = state.value.sources.orEmpty().associate { it.id to it.name }
             _searchResults.value = rows.mapNotNull { r ->
                 val name = names[r.sourceId] ?: return@mapNotNull null
-                TimelineItem(key = r.sourceId + ":" + r.articleKey, row = r, sourceName = name)
+                TimelineItem(row = r, sourceName = name)
             }
         }
     }
