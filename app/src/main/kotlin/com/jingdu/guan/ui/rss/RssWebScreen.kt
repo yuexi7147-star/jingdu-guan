@@ -208,6 +208,23 @@ fun RssWebScreen(
                         onExternalLink = links::open,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    // 悬浮球：拇指够得到的手势入口，不用去够顶栏
+                    com.jingdu.guan.ui.components.FloatingBall(
+                        count = sniffed.size,
+                        onTap = {
+                            webView?.evaluateJavascript(SNIFF_JS) { raw ->
+                                val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
+                                if (!v.isNullOrBlank() && v != "null" && v.startsWith("http") && v !in sniffed) {
+                                    sniffed.add(v)
+                                }
+                            }
+                        },
+                        onLongPress = { if (sniffed.isNotEmpty()) { onPlay(sniffed.first()); sniffed.clear() } },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = Dimens.gapL, bottom = Dimens.gapXXL),
+                    )
+
                     if (sniffed.isNotEmpty()) {
                         Column(
                             Modifier
