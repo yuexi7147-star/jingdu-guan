@@ -99,6 +99,17 @@ private fun isMediaUrl(url: String): Boolean {
         u.contains(".mp3") || u.contains(".webm") || u.contains(".flv")
 }
 
+
+/** 把隐藏规则转成一段可执行的 JS：创建/更新一个 <style>，避免每次重复注入 */
+private val AD_CSS_JS: String by lazy {
+    val css = com.jingdu.guan.data.source.AdBlockRules.HIDE_CSS
+        .replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
+    "(function(){var s=document.getElementById('__jg_ad');" +
+        "if(!s){s=document.createElement('style');s.id='__jg_ad';" +
+        "(document.head||document.documentElement).appendChild(s);}" +
+        "s.textContent=\"$css\";})()"
+}
+
 @Composable
 fun RssWebScreen(
     onBack: () -> Unit,
@@ -114,7 +125,7 @@ fun RssWebScreen(
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     // 页面里嗅到的视频直链；非空时顶部出一条「播放」提示
-    var sniffed by remember { mutableStateOf<String?>(null) }
+    val sniffed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     // 0..100；100 = 这一页加载完了，进度线收起
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -141,6 +152,17 @@ fun RssWebScreen(
                 actions = {
                     val url = currentUrl ?: state.url
                     if (url != null) {
+                        // 手动嗅探：点了才去找，找到的地址列在页面顶上
+                        AppIconButton(onClick = {
+                            webView?.evaluateJavascript(SNIFF_JS) { raw ->
+                                val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
+                                if (!v.isNullOrBlank() && v != "null" && v.startsWith("http") && v !in sniffed) {
+                                    sniffed.add(v)
+                                }
+                            }
+                        }) {
+                            Icon(MiuixIcons.Tune, contentDescription = "嗅探视频")
+                        }
                         AppIconButton(onClick = ::reload) {
                             Icon(MiuixIcons.Refresh, contentDescription = "刷新")
                         }
@@ -181,25 +203,34 @@ fun RssWebScreen(
                         },
                         onHistoryChanged = { canGoBack = it },
                         onMainFrameError = { pageError = it },
-                        onSniff = { sniffed = it },
+                        onSniff = { u -> if (u !in sniffed && sniffed.size < 20) sniffed.add(u) },
                         onExternalLink = links::open,
                         modifier = Modifier.fillMaxSize(),
                     )
-                    sniffed?.let { vurl ->
-                        Row(
+                    if (sniffed.isNotEmpty()) {
+                        Column(
                             Modifier
                                 .align(Alignment.TopCenter)
                                 .padding(top = Dimens.touchTarget)
                                 .background(MiuixTheme.colorScheme.primary, AppShapes.medium)
-                                .clickable { onPlay(vurl); sniffed = null }
-                                .padding(horizontal = Dimens.gapL, vertical = Dimens.gapS),
-                            verticalAlignment = Alignment.CenterVertically,
+                                .padding(Dimens.gapS),
                         ) {
                             Text(
-                                "发现视频 · 播放",
-                                style = MiuixTheme.textStyles.body2,
+                                "找到 " + sniffed.size + " 个地址",
+                                style = MiuixTheme.textStyles.footnote1,
                                 color = MiuixTheme.colorScheme.onPrimary,
                             )
+                            sniffed.take(6).forEachIndexed { i, u ->
+                                Text(
+                                    text = "播放 " + (i + 1) + " · " + u.takeLast(28),
+                                    style = MiuixTheme.textStyles.footnote2,
+                                    color = MiuixTheme.colorScheme.onPrimary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onPlay(u); sniffed.clear() }
+                                        .padding(vertical = Dimens.gapXS),
+                                )
+                            }
                         }
                     }
 
@@ -299,6 +330,12 @@ private fun SourceWebView(
                         // 媒体请求是最可靠的线索：页面怎么播都要把地址发出去，比翻 <video> 标签管用
                         val u = request.url?.toString().orEmpty()
                         if (isMediaUrl(u)) onSniff(u)
+                        // 广告/统计域名直接掐断，连下载都省了
+                        if (com.jingdu.guan.data.source.AdBlockRules.blockedHost(request.url?.host)
+                            || com.jingdu.guan.data.source.AdBlockRules.blockedPath(u)
+                        ) {
+                            return WebResourceResponse("text/plain", "utf-8", 204, "No Content", emptyMap(), java.io.ByteArrayInputStream(ByteArray(0)))
+                        }
                         return guard.intercept(request)
                     }
 
@@ -324,6 +361,15 @@ private fun SourceWebView(
                     override fun onPageFinished(view: WebView, url: String) {
                         super.onPageFinished(view, url)
                         // 视频地址多半是页面脚本跑完才挂上去的，隔一会儿再找两遍
+                        // 藏广告位：注入一次样式，后续动态插入的也吃得到
+                        view.evaluateJavascript(AD_CSS_JS, null)
+                        // 浮层单独清：脚本插入的、内联样式的，CSS 抓不到
+                        listOf(1200L, 4000L, 9000L).forEach { d ->
+                            view.postDelayed({
+                                view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
+                            }, d)
+                        }
+
                         listOf(800L, 2500L, 6000L).forEach { delayMs ->
                             view.postDelayed({
                                 view.evaluateJavascript(SNIFF_JS) { raw ->
