@@ -237,10 +237,10 @@ private fun LazyListScope.timelineItems(sections: List<TimelineSection>, onOpen:
             item(key = "day:$day", contentType = "day") { SectionHeader(sectionTitle(day, today)) }
         }
         itemsIndexed(section.items, key = { _, it -> it.key }, contentType = { _, _ -> "article" }) { index, item ->
-            ArticleRow(
+            MediaCard(
                 item,
                 onClick = { onOpen(item) },
-                modifier = Modifier.groupedCardItem(index, section.items.size),
+                modifier = Modifier.padding(bottom = Dimens.gapM),
             )
         }
     }
@@ -298,3 +298,69 @@ private fun ArticleRow(item: TimelineItem, onClick: () -> Unit, modifier: Modifi
 
 /** 下拉刷新的四段状态字：下拉中 / 过了阈值 / 刷新中 / 完成（顺序是 Miuix PullToRefresh 规定的） */
 private val REFRESH_TEXTS = listOf("下拉刷新", "松开刷新", "正在刷新…", "刷新完成")
+
+
+/**
+ * 一条媒体的卡片：大封面 + 标题 + 来源时间。
+ *
+ * 视频/音频共用一张卡 —— 这个 App 只收这两类，再用不同的行样式区分意义不大；
+ * 真正要区分的是横竖屏（封面比例），那要等拿到图片真实尺寸，下一版再做。
+ * 看过的条目封面压暗 + 标题变淡，和书架里读过的那本一个观感。
+ */
+@Composable
+private fun MediaCard(item: TimelineItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val row = item.row
+    val read = row.readAt > 0
+    val time = remember(row.pubTime, row.pubDate) {
+        if (row.pubTime > 0) formatRelativeTime(row.pubTime) else row.pubDate?.trim()?.takeIf { it.isNotEmpty() }
+    }
+    val meta = listOfNotNull(item.sourceName, time).joinToString(" · ").takeIf { it.isNotEmpty() }
+
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(AppShapes.medium)
+            .background(MiuixTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick)
+            .padding(bottom = Dimens.gapM),
+    ) {
+        val image = row.image?.takeIf { it.isNotBlank() }
+        if (image != null) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(topStart = AppShapes.radiusMedium, topEnd = AppShapes.radiusMedium)),
+            ) {
+                BookCover(
+                    title = row.title,
+                    coverModel = image,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (read) {
+                    Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.surface.copy(alpha = 0.55f)))
+                }
+            }
+        }
+        Column(Modifier.padding(horizontal = Dimens.gapM, vertical = Dimens.gapS)) {
+            Text(
+                text = row.title,
+                style = MiuixTheme.textStyles.body1,
+                color = if (read) MiuixTheme.colorScheme.onSurfaceVariantSummary
+                else MiuixTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (meta != null) {
+                Spacer(Modifier.height(Dimens.gapXS))
+                Text(
+                    text = meta,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
