@@ -80,7 +80,8 @@ fun RssSourceScreen(
     onOpenSource: (String) -> Unit,
     /** 单网页源（阅读的 singleUrl）：点开是网页页，不是文章列表 */
     onOpenWebSource: (String) -> Unit,
-    viewModel: RssSourceViewModel,
+    viewModel: RssSourceViewModel,,
+    onOpenMarket: () -> Unit = {},
 ) {
     val list by viewModel.list.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -185,6 +186,10 @@ fun RssSourceScreen(
                                 AppMenuItem("从剪贴板导入", onClick = {
                                     showImportMenu = false
                                     viewModel.importFromClipboard()
+                                }),
+                                AppMenuItem("从源市场添加", onClick = {
+                                    showImportMenu = false
+                                    onOpenMarket()
                                 }),
                                 AppMenuItem("从文件导入", onClick = {
                                     showImportMenu = false
