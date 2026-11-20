@@ -80,7 +80,7 @@ fun RssSourceScreen(
     onOpenSource: (String) -> Unit,
     /** 单网页源（阅读的 singleUrl）：点开是网页页，不是文章列表 */
     onOpenWebSource: (String) -> Unit,
-    viewModel: RssSourceViewModel,,
+    viewModel: RssSourceViewModel,
     onOpenMarket: () -> Unit = {},
 ) {
     val list by viewModel.list.collectAsStateWithLifecycle()

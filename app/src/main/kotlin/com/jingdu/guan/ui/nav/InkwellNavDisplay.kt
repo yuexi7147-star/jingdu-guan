@@ -393,11 +393,13 @@ fun InkwellNavDisplay(
                     onOpenDeveloper = { nav.go(DeveloperSettingsRoute) },
                 )
             }
-            entry<MarketRoute> {
+            entry<MarketRoute>(
+                metadata = ListDetailSceneStrategy.detailPane(sceneKey = NavPaneGroup.SETTINGS),
+            ) {
                 val mvm = koinViewModel<com.jingdu.guan.ui.market.SourceMarketViewModel>()
                 com.jingdu.guan.ui.market.SourceMarketScreen(
                     viewModel = mvm,
-                    onBack = { nav.pop() },
+                    onBack = { nav.back() },
                 )
             }
             entry<RssSourceRoute>(
