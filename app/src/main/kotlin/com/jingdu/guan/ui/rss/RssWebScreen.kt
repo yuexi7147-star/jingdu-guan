@@ -171,6 +171,7 @@ fun RssWebScreen(
                         },
                         onHistoryChanged = { canGoBack = it },
                         onMainFrameError = { pageError = it },
+                        onSniff = { sniffed = it },
                         onExternalLink = links::open,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -249,6 +250,7 @@ private fun SourceWebView(
     onPageStarted: (String) -> Unit,
     onHistoryChanged: (canGoBack: Boolean) -> Unit,
     onMainFrameError: (String) -> Unit,
+    onSniff: (String) -> Unit = {},
     onExternalLink: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -313,7 +315,7 @@ private fun SourceWebView(
                                 view.evaluateJavascript(SNIFF_JS) { raw ->
                                     val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
                                     if (!v.isNullOrBlank() && v != "null" && v.startsWith("http")) {
-                                        sniffed(v)
+                                        onSniff(v)
                                     }
                                 }
                             }, delayMs)
