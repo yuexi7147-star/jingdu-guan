@@ -39,6 +39,10 @@ data class RssTimelineUiState(
     val articlesLoaded: Boolean = false,
     /** 当前这几条列表有正在取的（或马上要取的） */
     val fetching: Boolean = false,
+    /** 本地搜索词（空 = 不搜，走正常时间线） */
+    val searchQuery: String = "",
+    /** 搜索结果；searchQuery 非空时用它代替 sections */
+    val searchResults: List<TimelineItem> = emptyList(),
     /** 下拉刷新的转圈：只跟着用户自己拉的那一次 */
     val userRefreshing: Boolean = false,
     /** 当前这几条列表里取失败的：源名 → 原因 */
@@ -59,6 +63,7 @@ class RssTimelineViewModel(
     initialSourceId: String?,
     private val repo: RssRepository,
     private val feeds: RssFeedRepository,
+    private val articleDao: com.jingdu.guan.data.db.dao.RssArticleDao,
 ) : ViewModel() {
 
     private data class Selection(val sourceId: String?, val sortIndex: Int)
@@ -69,6 +74,40 @@ class RssTimelineViewModel(
         val rules: Map<String, RssSourceRule>,
         val hasWeb: Boolean,
     )
+
+
+    /** 本地搜索词（空 = 不搜） */
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: kotlinx.coroutines.flow.StateFlow<String> = _searchQuery
+
+    /** 搜索结果；null = 没在搜 */
+    private val _searchResults = MutableStateFlow<List<TimelineItem>?>(null)
+    val searchResults: kotlinx.coroutines.flow.StateFlow<List<TimelineItem>?> = _searchResults
+
+    private var searchJob: Job? = null
+
+    /**
+     * 本地搜索：在已拉下来的条目里按标题找。
+     *
+     * RSS 只给最近 N 条，搜不到更早的历史 —— 这是本地搜索的边界。
+     * 换来的即时、离线、不耗流量值得。
+     */
+    fun search(query: String) {
+        _searchQuery.value = query
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _searchResults.value = null
+            return
+        }
+        searchJob = viewModelScope.launch {
+            val rows = runCatching { articleDao.searchByTitle(query.trim()) }.getOrDefault(emptyList())
+            val names = (_ui.value.sources).orEmpty().associate { it.id to it.name }
+            _searchResults.value = rows.mapNotNull { r ->
+                val name = names[r.sourceId] ?: return@mapNotNull null
+                TimelineItem(key = r.sourceId + ":" + r.articleKey, row = r, sourceName = name)
+            }
+        }
+    }
 
     private val selection = MutableStateFlow(Selection(initialSourceId, 0))
 
