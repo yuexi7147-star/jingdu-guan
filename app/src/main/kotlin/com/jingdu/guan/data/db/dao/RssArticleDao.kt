@@ -46,4 +46,24 @@ interface RssArticleDao {
 
     @Query("DELETE FROM rss_article WHERE sourceId = :sourceId")
     suspend fun deleteBySource(sourceId: String)
+
+    /**
+     * 本地搜索：在所有已拉下来的条目里按标题找。
+     *
+     * RSS 只给最近 N 条，搜不到更早的历史 —— 这是本地搜索的边界，不是 bug。
+     * 好处是即时、离线、不耗流量；用得越久，能搜到的越多。
+     */
+    @Query(
+        "SELECT feed, articleKey, sourceId, title, link, image, pubDate, pubTime, firstSeenAt, lastSeenAt, position, readAt " +
+            "FROM rss_article WHERE title LIKE '%' || :query || '%' ORDER BY pubTime DESC LIMIT :limit",
+    )
+    suspend fun searchByTitle(query: String, limit: Int = 200): List<RssArticleRow>
+
+    /** 只在某一个源里搜 */
+    @Query(
+        "SELECT feed, articleKey, sourceId, title, link, image, pubDate, pubTime, firstSeenAt, lastSeenAt, position, readAt " +
+            "FROM rss_article WHERE sourceId = :sourceId AND title LIKE '%' || :query || '%' " +
+            "ORDER BY pubTime DESC LIMIT :limit",
+    )
+    suspend fun searchByTitleInSource(sourceId: String, query: String, limit: Int = 200): List<RssArticleRow>
 }
