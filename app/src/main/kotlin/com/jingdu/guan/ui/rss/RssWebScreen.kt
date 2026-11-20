@@ -174,6 +174,24 @@ fun RssWebScreen(
                         onExternalLink = links::open,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    sniffed?.let { vurl ->
+                        Row(
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = Dimens.touchTarget)
+                                .background(MiuixTheme.colorScheme.primary, AppShapes.medium)
+                                .clickable { onPlay(vurl); sniffed = null }
+                                .padding(horizontal = Dimens.gapL, vertical = Dimens.gapS),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "发现视频 · 播放",
+                                style = MiuixTheme.textStyles.body2,
+                                color = MiuixTheme.colorScheme.onPrimary,
+                            )
+                        }
+                    }
+
                     if (progress in 0 until 100) {
                         DeterminateProgressBar(
                             progress = progress / 100f,
