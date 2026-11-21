@@ -53,4 +53,9 @@ class SuspiciousCounter(private val context: Context) {
     }
 
     suspend fun forget(id: String) = clear(id)
+
+    companion object {
+        /** 连续这么多次连不上才判死。一次超时通常是网络抖动，不是站死了 */
+        const val MAX_SUSPICIOUS = 3
+    }
 }
