@@ -14,6 +14,9 @@ object MediaOpenExternal {
 
     /** 返回是否成功拉起选择器（没有能处理的应用时返回 false） */
     fun open(context: Context, url: String, title: String = ""): Boolean = runCatching {
+        // 用 video/* 而不是精确 MIME：application/x-mpegURL 这类具体类型
+        // 在多数手机上没有任何 App 注册，选择器直接弹不出来（点了没反应）。
+        // 精确类型只用来在多个应用间优选，最终仍按通用类型发，保证一定能弹选择器。
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(Uri.parse(url), mimeOf(url))
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -21,6 +24,10 @@ object MediaOpenExternal {
         }
         val chooser = Intent.createChooser(intent, title.ifBlank { "用其他应用打开" }).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        // 先按精确类型试；没有任何应用能处理时退回通用类型，别让按钮点了没反应
+        if (context.packageManager.queryIntentActivities(intent, 0).isEmpty()) {
+            intent.setDataAndType(Uri.parse(url), "video/*")
         }
         context.startActivity(chooser)
         true
