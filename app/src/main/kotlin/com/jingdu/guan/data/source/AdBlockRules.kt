@@ -48,17 +48,16 @@ object AdBlockRules {
      * [class*=] 是子串匹配，比逐个列举类名覆盖广得多。
      */
     val HIDE_CSS: String = """
-        [class*="ad-"], [class*="-ad"], [class*="ads"], [class*="advert"],
-        [id*="ad-"], [id*="-ad"], [id*="ads"], [id*="advert"],
+        [class*="advert"], [id*="advert"],
         [class*="banner"], [id*="banner"],
-        [class*="popup"], [class*="pop-under"], [class*="popunder"],
+        [class*="popunder"], [class*="popup-ad"],
+        [id^="ad-"], [class^="ad-"], [class$="-ad-banner"],
         [class*="float-ad"], [class*="fixed-ad"], [class*="sticky-ad"],
         [class*="download-app"], [class*="openApp"], [class*="open-app"],
-        [class*="guide-mask"], [class*="mask-layer"], [class*="overlay-ad"],
+        [class*="guide-mask"], [class*="overlay-ad"],
         iframe[src*="doubleclick"], iframe[src*="googlesyndication"],
-        iframe[src*="cpro.baidu"], iframe[src*="tanx"],
-        a[href*="app."][class*="btn"], div[class*="qrcode"]
-        { display: none !important; visibility: hidden !important; height: 0 !important; }
+        iframe[src*="cpro.baidu"], iframe[src*="tanx"]
+        { display: none !important; }
     """.trimIndent()
 
     /**
@@ -103,7 +102,8 @@ object AdBlockRules {
     val DISMISS_JS: String = """
         (function(){
           try {
-            var killer = ['继续观看','继续播放','关闭广告','我知道了','知道了','跳过','稍后再说','以后再说'];
+            var killer = ['关闭广告','跳过广告'];
+            // 只留这两个：点错「继续」可能触发提交表单或跳转，代价太大
             var killed = 0;
             var btns = document.querySelectorAll('a,button,div,span');
             for (var i = 0; i < btns.length && killed < 6; i++) {

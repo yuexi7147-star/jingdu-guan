@@ -145,6 +145,7 @@ fun RssWebScreen(
     var webView by remember { mutableStateOf<WebView?>(null) }
     // 页面里嗅到的视频直链；非空时顶部出一条「播放」提示
     val sniffed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    var purifyMode by remember { mutableStateOf(false) }
     // 0..100；100 = 这一页加载完了，进度线收起
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -171,6 +172,20 @@ fun RssWebScreen(
                 actions = {
                     val url = currentUrl ?: state.url
                     if (url != null) {
+                        // 一键净化：点了立刻藏广告、关弹窗、拦跨域跳转；再点恢复
+                        AppIconButton(onClick = {
+                            purifyMode = !purifyMode
+                            if (purifyMode) {
+                                webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
+                                webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
+                                webView?.evaluateJavascript(AD_CSS_JS, null)
+                            }
+                        }) {
+                            Icon(
+                                MiuixIcons.Refresh,
+                                contentDescription = if (purifyMode) "已净化，点击恢复" else "一键净化",
+                            )
+                        }
                         AppIconButton(onClick = ::reload) {
                             Icon(MiuixIcons.Refresh, contentDescription = "刷新")
                         }
@@ -396,9 +411,12 @@ private fun SourceWebView(
 
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         if (guard.blocksNavigation(request)) return true
-                        // 脚本自己跳的（没有手指参与）一律拦掉 —— 这类站的广告跳转全是这一手
-                        if (!request.hasGesture() && request.url.host != view.url?.let { android.net.Uri.parse(it).host }) {
-                            return true
+                        // 净化开着才拦：且只拦「没手指参与 + 跨域名」的跳转
+                        // 同域跳转放行 —— 很多站是 SPA，点链接走 JS 路由不一定带手势标记
+                        if (purifyMode) {
+                            val curHost = view.url?.let { android.net.Uri.parse(it).host }
+                            val toHost = request.url.host
+                            if (!request.hasGesture() && toHost != null && toHost != curHost) return true
                         }
                         return when (request.url.scheme?.lowercase()) {
                             "http", "https" -> false
@@ -420,14 +438,17 @@ private fun SourceWebView(
                     override fun onPageFinished(view: WebView, url: String) {
                         super.onPageFinished(view, url)
                         // 视频地址多半是页面脚本跑完才挂上去的，隔一会儿再找两遍
-                        // 藏广告位：注入一次样式，后续动态插入的也吃得到
-                        view.evaluateJavascript(AD_CSS_JS, null)
-                        // 浮层单独清：脚本插入的、内联样式的，CSS 抓不到
-                        listOf(1200L, 3000L, 6000L, 10000L, 16000L).forEach { d ->
-                            view.postDelayed({
-                                view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
-                                view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
-                            }, d)
+                        // 只有净化开着才清理 —— 默认不动网页，避免误伤
+                        if (purifyMode) {
+                            view.evaluateJavascript(AD_CSS_JS, null)
+                            listOf(800L, 2500L, 6000L).forEach { d ->
+                                view.postDelayed({
+                                    if (purifyMode) {
+                                        view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
+                                        view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
+                                    }
+                                }, d)
+                            }
                         }
 
                         listOf(800L, 2500L, 6000L).forEach { delayMs ->
