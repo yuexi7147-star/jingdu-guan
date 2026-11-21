@@ -170,17 +170,6 @@ fun RssWebScreen(
                 actions = {
                     val url = currentUrl ?: state.url
                     if (url != null) {
-                        // 手动嗅探：点了才去找，找到的地址列在页面顶上
-                        AppIconButton(onClick = {
-                            webView?.evaluateJavascript(SNIFF_JS) { raw ->
-                                val v = raw?.trim()?.trim('"')?.replace("\\/", "/")
-                                if (!v.isNullOrBlank() && v != "null" && v.startsWith("http") && v !in sniffed) {
-                                    sniffed.add(v)
-                                }
-                            }
-                        }) {
-                            Icon(MiuixIcons.Refresh, contentDescription = "嗅探视频")
-                        }
                         AppIconButton(onClick = ::reload) {
                             Icon(MiuixIcons.Refresh, contentDescription = "刷新")
                         }
