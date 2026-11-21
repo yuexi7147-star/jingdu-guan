@@ -34,6 +34,7 @@ data class RssImportReport(
 class RssRepository(
     private val dao: RssSourceDao,
     private val http: SourceHttpClient,
+    private val engine: com.jingdu.guan.core.source.rss.RssEngine,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -241,7 +242,7 @@ class RssRepository(
      *
      * 结果不入库 —— 它是「临时看一眼」，塞进 rss_article 会把时间线搅乱。
      */
-    suspend fun searchInSource(sourceId: String, keyword: String, engine: RssEngine): List<RssArticle> {
+    suspend fun searchInSource(sourceId: String, keyword: String): List<RssArticle> {
         val rule = getRule(sourceId) ?: throw IllegalStateException("订阅源不存在")
         return engine.search(rule, keyword).items
     }

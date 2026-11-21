@@ -77,6 +77,43 @@ class RssTimelineViewModel(
     )
 
 
+    /** 源内搜索结果；null = 没在搜 */
+    private val _sourceSearch = MutableStateFlow<SourceSearchState?>(null)
+    val sourceSearch: kotlinx.coroutines.flow.StateFlow<SourceSearchState?> = _sourceSearch
+
+    /**
+     * 源内搜索：走源自己的 searchUrl，只对当前选中的那个源有效。
+     *
+     * 「全部」下不给搜 —— 几十个源各发一次请求，既慢又容易被站点限流；
+     * 想看某个源里有什么，先选它。
+     */
+    fun searchInSource(keyword: String) {
+        val sid = state.value.selectedSource ?: return
+        if (keyword.isBlank()) { _sourceSearch.value = null; return }
+        _sourceSearch.value = SourceSearchState(keyword = keyword, loading = true, items = emptyList(), error = null)
+        viewModelScope.launch {
+            val r = runCatching { repo.searchInSource(sid, keyword) }
+            _sourceSearch.value = SourceSearchState(
+                keyword = keyword,
+                loading = false,
+                items = r.getOrDefault(emptyList()).map { a ->
+                    TimelineItem(
+                        row = com.jingdu.guan.data.db.entity.RssArticleRow(
+                            feed = a.sourceId, articleKey = a.link.ifBlank { a.title },
+                            sourceId = a.sourceId, title = a.title, link = a.link,
+                            image = a.image, pubDate = a.pubDate, pubTime = 0,
+                            firstSeenAt = 0, lastSeenAt = 0, position = 0, readAt = 0,
+                        ),
+                        sourceName = state.value.sources?.firstOrNull { it.id == a.sourceId }?.name,
+                    )
+                },
+                error = r.exceptionOrNull()?.message?.take(60),
+            )
+        }
+    }
+
+    fun clearSourceSearch() { _sourceSearch.value = null }
+
     /** 本地搜索词（空 = 不搜） */
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: kotlinx.coroutines.flow.StateFlow<String> = _searchQuery
@@ -294,3 +331,11 @@ class RssTimelineViewModel(
         }
     }
 }
+
+/** 源内搜索的状态 */
+data class SourceSearchState(
+    val keyword: String,
+    val loading: Boolean,
+    val items: List<TimelineItem>,
+    val error: String?,
+)

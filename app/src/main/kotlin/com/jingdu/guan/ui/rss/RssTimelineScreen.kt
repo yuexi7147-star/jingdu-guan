@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import com.jingdu.guan.ui.components.CompactTextField
 import com.jingdu.guan.ui.theme.AppShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -79,6 +80,8 @@ fun RssTimelineScreen(
     viewModel: RssTimelineViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var showSearch by remember { mutableStateOf(false) }
+    var searchKey by remember { mutableStateOf("") }
     val pageColor = settingsPageColor()
     val sources = state.sources
 
@@ -89,12 +92,41 @@ fun RssTimelineScreen(
                 navigationIcon = { BackButton(onClick = onBack) },
                 containerColor = pageColor,
                 actions = {
+                    // 源内搜索：只有选中具体某个源时才出现 —— 「全部」下发请求等于朝几十个站同时打
+                    if (state.selectedSource != null) {
+                        AppIconButton(onClick = { showSearch = !showSearch }) {
+                            Icon(MiuixIcons.Search, contentDescription = "在源内搜索")
+                        }
+                    }
                     AppIconButton(onClick = onOpenSources) {
                         Icon(MiuixIcons.Tune, contentDescription = "订阅源")
                     }
                 },
                 // 来源 chip、分类 chip 钉在栏底下：文章从它们下面滚过去，一起被毛玻璃盖住
                 bottomContent = {
+                    if (showSearch) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Dimens.screenPadding, vertical = Dimens.gapS),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CompactTextField(
+                                value = searchKey,
+                                onValueChange = { searchKey = it },
+                                placeholder = "搜这个源里的内容",
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = "搜索",
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clickable { viewModel.searchInSource(searchKey) }
+                                    .padding(horizontal = Dimens.gapM, vertical = Dimens.gapS),
+                            )
+                        }
+                    }
                     if (!sources.isNullOrEmpty()) SourceChips(state, viewModel)
                 },
             ) {

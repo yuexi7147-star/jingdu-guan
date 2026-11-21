@@ -111,7 +111,7 @@ val appModule = module {
             globalPurify = { source, bookTitle -> replaceRules.purifyFor(source, bookTitle) },
         )
     }
-    single { com.jingdu.guan.data.repo.RssRepository(get(), get()) }
+    single { com.jingdu.guan.data.repo.RssRepository(get(), get(), get()) }
     single { com.jingdu.guan.data.repo.RssFeedRepository(get(), get(), get()) }
     // 更新用的通用 HTTP 客户端（检查 + 下载安装包 + 反馈上报）
     single {
