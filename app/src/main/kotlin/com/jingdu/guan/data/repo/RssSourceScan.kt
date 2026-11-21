@@ -84,7 +84,10 @@ class RssSourceScan(
         try {
             // 这一轮有没有走代理 —— 决定「连不上」该不该算账
             val proxied = ProxyState.isProxyActive(context)
-            val all = repo.sources.first().filter { it.enabled }
+            // 内置源不参与判定：它们删了就没了，而这个站多半只是需要代理或今天抽风。
+            // 用户想删可以自己去列表里删，自动检测不许碰。
+            val builtin = runCatching { BuiltinSources.builtinUrls(context) }.getOrDefault(emptySet())
+            val all = repo.sources.first().filter { it.enabled && it.id !in builtin }
             _progress.value = 0 to all.size
 
             all.forEachIndexed { i, src ->

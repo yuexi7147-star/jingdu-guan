@@ -40,4 +40,29 @@ object BuiltinSources {
         prefs.edit().putBoolean(KEY_DONE, true).apply()
         ok
     }
+
+    /**
+     * 内置源的地址名单。
+     *
+     * 检测必须跳过这些：内置源一旦被当成「失效」删掉，用户手里就没有能用的源了，
+     * 而这个站十有八九只是需要代理/今天抽风 —— 不是真死了。
+     * 从 assets 里读一次解析出来，别写死在两处。
+     */
+    suspend fun builtinUrls(context: Context): Set<String> = withContext(Dispatchers.IO) {
+        val out = mutableSetOf<String>()
+        for (name in FILES) {
+            val text = runCatching {
+                context.assets.open("rss_builtin/" + name).bufferedReader().use { it.readText() }
+            }.getOrNull() ?: continue
+            runCatching {
+                val arr = kotlinx.serialization.json.Json.parseToJsonElement(text)
+                val list = if (arr is kotlinx.serialization.json.JsonArray) arr else kotlinx.serialization.json.JsonArray(listOf(arr))
+                list.forEach { el ->
+                    val obj = el as? kotlinx.serialization.json.JsonObject ?: return@forEach
+                    (obj["sourceUrl"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.let { out.add(it.trim()) }
+                }
+            }
+        }
+        out
+    }
 }
