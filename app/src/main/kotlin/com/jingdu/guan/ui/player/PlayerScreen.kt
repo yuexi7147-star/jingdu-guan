@@ -1,7 +1,13 @@
 package com.jingdu.guan.ui.player
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.view.ViewGroup
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -9,11 +15,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -39,18 +48,20 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.jingdu.guan.ui.components.Dimens
 import com.jingdu.guan.ui.components.DeterminateProgressBar
-import com.jingdu.guan.ui.components.SecondaryButton
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 播放页：视频与音频共用。
+ * 播放页。
  *
- * 播放器实例绑在本页 Composition 上（DisposableEffect），不放 ViewModel —— ViewModel 比页面活得久，
- * 把 ExoPlayer 放进去，退出后解码器与 Surface 都还在，是泄漏。
+ * 布局照常见播放器：**画面占满整屏，控制条浮在画面上**。
+ * 之前把控制区放在视频下方，横屏时被挤出屏幕 —— 那是个结构性错误，不是样式问题。
  *
- * 手势照常见播放器的约定：左半屏上下滑调亮度、右半屏调音量、横划调进度；
- * 双击左/右半屏后退/前进 10 秒。手势区只在播放画面上，下面的信息区不拦。
+ * 全屏是真全屏：切横屏 + 隐藏系统栏，不是靠用户自己开方向锁定。
  */
 @Composable
 fun PlayerScreen(
@@ -59,12 +70,33 @@ fun PlayerScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val activity = context as? android.app.Activity
+    val activity = context as? Activity
 
     val player = remember { ExoPlayer.Builder(context).build().apply { playWhenReady = true } }
     var hud by remember { mutableStateOf<String?>(null) }
     var dragAccum by remember { mutableFloatStateOf(0f) }
     var startPosMs by remember { mutableLongStateOf(0L) }
+    var controlsShown by remember { mutableStateOf(true) }
+    var fullscreen by remember { mutableStateOf(false) }
+
+    // 全屏：切横屏 + 隐藏系统栏；退出时恢复
+    DisposableEffect(fullscreen) {
+        val w = activity?.window
+        val controller = w?.let { WindowInsetsControllerCompat(it, it.decorView) }
+        if (fullscreen) {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            controller?.hide(WindowInsetsCompat.Type.systemBars())
+            controller?.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
 
     DisposableEffect(Unit) {
         val listener = object : Player.Listener {
@@ -89,10 +121,8 @@ fun PlayerScreen(
         }
     }
 
-    // 准备并恢复上次进度
     LaunchedEffect(state.url, state.referer) {
         if (state.url.isNotBlank()) {
-            // 防盗链：不少站的媒体地址只认自己网页来的请求，不带头就 403
             val ref = state.referer
             val headers: Map<String, String> =
                 if (!ref.isNullOrBlank()) mapOf("Referer" to ref) else emptyMap()
@@ -100,7 +130,6 @@ fun PlayerScreen(
                 .setUserAgent("Mozilla/5.0 (Linux; Android 14)")
                 .setDefaultRequestProperties(headers)
                 .setAllowCrossProtocolRedirects(true)
-
             val item = MediaItem.fromUri(state.url)
             val isHls = state.url.contains(".m3u8", ignoreCase = true)
             val source = if (isHls) {
@@ -115,10 +144,8 @@ fun PlayerScreen(
         }
     }
 
-    // 倍速跟状态
     LaunchedEffect(state.speed) { player.setPlaybackSpeed(state.speed) }
 
-    // 进度轮询
     LaunchedEffect(Unit) {
         while (true) {
             viewModel.setProgress(player.currentPosition, player.duration.coerceAtLeast(0))
@@ -126,169 +153,216 @@ fun PlayerScreen(
         }
     }
 
+    // 播放中 3 秒无操作收起控制条
+    LaunchedEffect(controlsShown, state.playing) {
+        if (controlsShown && state.playing) {
+            kotlinx.coroutines.delay(3000)
+            controlsShown = false
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        Column(Modifier.fillMaxSize()) {
-            // ---- 画面 + 手势 ----
-            Box(
+        // ---- 画面：铺满整屏 ----
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+                    useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    this.player = player
+                }
+            },
+            update = { it.player = player },
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(state.url) {
+                    detectTapGestures(
+                        onTap = { controlsShown = !controlsShown },
+                        onDoubleTap = { offset ->
+                            val half = size.width / 2f
+                            if (offset.x < half) {
+                                player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
+                                hud = "« 10 秒"
+                            } else {
+                                player.seekTo(player.currentPosition + 10_000)
+                                hud = "10 秒 »"
+                            }
+                        },
+                    )
+                }
+                .pointerInput(state.url) {
+                    detectDragGestures(
+                        onDragStart = { dragAccum = 0f; startPosMs = player.currentPosition },
+                        onDragEnd = { hud = null },
+                        onDrag = { change, drag ->
+                            change.consume()
+                            dragAccum += drag.x
+                            val w = size.width.coerceAtLeast(1)
+                            val h = size.height.coerceAtLeast(1)
+                            if (kotlin.math.abs(dragAccum) > kotlin.math.abs(drag.y) * 3) {
+                                val dur = player.duration.coerceAtLeast(0)
+                                if (dur > 0) {
+                                    val delta = (dragAccum / w * dur * 0.5).toLong()
+                                    val target = (startPosMs + delta).coerceIn(0, dur)
+                                    player.seekTo(target)
+                                    hud = formatTime(target)
+                                }
+                            } else {
+                                val left = change.position.x < w / 2
+                                val d = -drag.y / h
+                                if (left) {
+                                    val cur = activity?.window?.attributes?.screenBrightness ?: 0.5f
+                                    val next = (cur + d).coerceIn(0.05f, 1f)
+                                    activity?.window?.attributes = activity?.window?.attributes?.apply {
+                                        screenBrightness = next
+                                    }
+                                    hud = "亮度 " + (next * 100).toInt() + "%"
+                                } else {
+                                    val am = context.getSystemService(android.content.Context.AUDIO_SERVICE)
+                                        as android.media.AudioManager
+                                    val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                                    val cur = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+                                    val next = (cur + (d * max).toInt()).coerceIn(0, max)
+                                    am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, next, 0)
+                                    hud = "音量 " + (next * 100 / max) + "%"
+                                }
+                            }
+                        },
+                    )
+                },
+        )
+
+        if (state.buffering) {
+            Text(
+                "缓冲中…",
+                color = Color.White,
+                style = MiuixTheme.textStyles.body2,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+        state.error?.let {
+            Text(
+                it,
+                color = Color.White,
+                style = MiuixTheme.textStyles.body2,
+                modifier = Modifier.align(Alignment.Center).padding(Dimens.screenPadding),
+            )
+        }
+
+        // ---- 控制条：浮在画面上 ----
+        AnimatedVisibility(
+            visible = controlsShown,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Column(
                 Modifier
                     .fillMaxWidth()
-                    .then(if (state.portrait) Modifier.aspectRatio(9f / 16f) else Modifier.aspectRatio(16f / 9f))
-                    .background(Color.Black)
-                    .pointerInput(state.url) {
-                        detectTapGestures(
-                            onDoubleTap = { offset ->
-                                val half = size.width / 2f
-                                if (offset.x < half) {
-                                    player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
-                                    hud = "« 10 秒"
-                                } else {
-                                    player.seekTo(player.currentPosition + 10_000)
-                                    hud = "10 秒 »"
-                                }
-                            },
-                            onTap = { if (state.playing) player.pause() else player.play() },
-                        )
-                    }
-                    .pointerInput(state.url) {
-                        detectDragGestures(
-                            onDragStart = { dragAccum = 0f; startPosMs = player.currentPosition },
-                            onDragEnd = { hud = null },
-                            onDrag = { change, drag ->
-                                change.consume()
-                                dragAccum += drag.x
-                                val w = size.width.coerceAtLeast(1)
-                                val h = size.height.coerceAtLeast(1)
-                                // 横向为主 → 调进度；否则按落点在左/右调亮度/音量
-                                if (kotlin.math.abs(dragAccum) > kotlin.math.abs(drag.y) * 3) {
-                                    val dur = player.duration.coerceAtLeast(0)
-                                    if (dur > 0) {
-                                        // 从拖动起点算总位移：在当前位置上反复加，每帧都会跳得更远
-                                        val delta = (dragAccum / w * dur * 0.5).toLong()
-                                        val target = (startPosMs + delta).coerceIn(0, dur)
-                                        player.seekTo(target)
-                                        hud = formatTime(target)
-                                    }
-                                } else {
-                                    val left = change.position.x < w / 2
-                                    val d = -drag.y / h
-                                    if (left) {
-                                        val cur = activity?.window?.attributes?.screenBrightness ?: 0.5f
-                                        val next = (cur + d).coerceIn(0.05f, 1f)
-                                        activity?.window?.attributes = activity?.window?.attributes?.apply {
-                                            screenBrightness = next
-                                        }
-                                        hud = "亮度 " + (next * 100).toInt() + "%"
-                                    } else {
-                                        val am = context.getSystemService(android.content.Context.AUDIO_SERVICE)
-                                            as android.media.AudioManager
-                                        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-                                        val cur = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-                                        val next = (cur + (d * max).toInt()).coerceIn(0, max)
-                                        am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, next, 0)
-                                        hud = "音量 " + (next * 100 / max) + "%"
-                                    }
-                                }
-                            },
-                        )
-                    },
-                contentAlignment = Alignment.Center,
+                    .background(Color.Black.copy(alpha = 0.62f))
+                    .padding(Dimens.gapM),
             ) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            this.player = player
-                        }
-                    },
-                    update = { it.player = player },
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                if (state.buffering) {
-                    Text("缓冲中…", color = Color.White, style = MiuixTheme.textStyles.body2)
-                }
-                state.error?.let {
-                    Text(it, color = Color.White, style = MiuixTheme.textStyles.body2)
-                }
-                // 手势反馈
-                hud?.let {
-                    Box(
-                        Modifier.background(Color.Black.copy(alpha = 0.65f)).padding(Dimens.gapM),
-                    ) {
-                        Text(it, color = Color.White, style = MiuixTheme.textStyles.body2)
-                    }
-                }
-            }
-
-            // ---- 信息与控制 ----
-            Column(Modifier.padding(Dimens.screenPadding)) {
+                // 标题
                 Text(
-                    state.title.ifBlank { "未命名" },
-                    style = MiuixTheme.textStyles.title3,
+                    state.title.ifBlank { "视频" },
+                    style = MiuixTheme.textStyles.body1,
                     color = Color.White,
-                    maxLines = 2,
+                    maxLines = 1,
                 )
-                if (state.subtitle.isNotBlank()) {
-                    Spacer(Modifier.height(Dimens.gapXS))
-                    Text(
-                        state.subtitle,
-                        style = MiuixTheme.textStyles.footnote1,
-                        color = Color.White.copy(alpha = 0.7f),
-                    )
-                }
-                Spacer(Modifier.height(Dimens.gapM))
+                Spacer(Modifier.height(Dimens.gapS))
 
-                val progress = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f
-                Text(
-                    text = formatTime(state.positionMs) + " / " + formatTime(state.durationMs),
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = Color.White.copy(alpha = 0.8f),
+                // 进度
+                DeterminateProgressBar(
+                    progress = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f,
                 )
                 Spacer(Modifier.height(Dimens.gapXS))
-                DeterminateProgressBar(progress = progress)
-
-                Spacer(Modifier.height(Dimens.gapM))
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.gapS),
-                ) {
-                    SecondaryButton(text = "返回", onClick = onBack)
-                    SecondaryButton(
-                        text = if (state.playing) "暂停" else "播放",
-                        onClick = { if (state.playing) player.pause() else player.play() },
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        formatTime(state.positionMs) + " / " + formatTime(state.durationMs),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = Color.White.copy(alpha = 0.85f),
                     )
-                    SecondaryButton(
-                        text = "后退10",
-                        onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) },
-                    )
-                    SecondaryButton(
-                        text = "前进10",
-                        onClick = { player.seekTo(player.currentPosition + 10_000) },
+                    Text(
+                        if (state.speed == 1f) "1x" else formatSpeed(state.speed),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = Color.White.copy(alpha = 0.85f),
                     )
                 }
 
                 Spacer(Modifier.height(Dimens.gapS))
+
+                // 主控：一行的图标
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.gapS),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CtrlButton("返回") { onBack() }
+                    CtrlButton("-10") {
+                        player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0))
+                    }
+                    CtrlButton(if (state.playing) "暂停" else "播放") {
+                        if (state.playing) player.pause() else player.play()
+                    }
+                    CtrlButton("+10") { player.seekTo(player.currentPosition + 10_000) }
+                    CtrlButton(if (fullscreen) "退出" else "全屏") { fullscreen = !fullscreen }
+                }
+
+                Spacer(Modifier.height(Dimens.gapS))
+
+                // 倍速：一排小字
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     PlayerViewModel.SPEEDS.forEach { sp ->
                         val on = kotlin.math.abs(state.speed - sp) < 0.01f
-                        SecondaryButton(
-                            text = if (sp == 1f) "1x" else sp.toString().trimEnd('0').trimEnd('.') + "x",
-                            onClick = { viewModel.setSpeed(sp) },
-                            enabled = !on,
+                        Text(
+                            text = formatSpeed(sp),
+                            style = MiuixTheme.textStyles.footnote2,
+                            color = if (on) MiuixTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .clickable { viewModel.setSpeed(sp) }
+                                .padding(horizontal = Dimens.gapS, vertical = Dimens.gapXS),
                         )
                     }
                 }
             }
         }
+
+        // 手势 HUD
+        hud?.let {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = Dimens.gapXXL)
+                    .background(Color.Black.copy(alpha = 0.7f), androidx.compose.foundation.shape.RoundedCornerShape(Dimens.gapM))
+                    .padding(horizontal = Dimens.gapL, vertical = Dimens.gapS),
+            ) {
+                Text(it, color = Color.White, style = MiuixTheme.textStyles.body2)
+            }
+        }
     }
+}
+
+@Composable
+private fun CtrlButton(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        style = MiuixTheme.textStyles.footnote1,
+        color = Color.White,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = Dimens.gapS, vertical = Dimens.gapS),
+    )
+}
+
+private fun formatSpeed(sp: Float): String {
+    val s = sp.toString().trimEnd('0').trimEnd('.')
+    return s + "x"
 }
 
 private fun formatTime(ms: Long): String {

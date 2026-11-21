@@ -113,6 +113,19 @@ private val AD_CSS_JS: String by lazy {
         "s.textContent=\"$css\";})()"
 }
 
+
+/** 地址显示成「域名/文件名」：原始 URL 后面挂一长串 token，直接显示什么都看不出来 */
+private fun shortUrl(url: String): String {
+    return try {
+        val u = java.net.URI(url)
+        val host = u.host ?: ""
+        val name = u.path?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: ""
+        if (name.length > 18) host + "/…" + name.takeLast(12) else host + "/" + name
+    } catch (e: Exception) {
+        url.take(36)
+    }
+}
+
 @Composable
 fun RssWebScreen(
     onBack: () -> Unit,
@@ -242,7 +255,7 @@ fun RssWebScreen(
                             )
                             sniffed.take(6).forEachIndexed { i, u ->
                                 Text(
-                                    text = "播放 " + (i + 1) + " · " + u.takeLast(28),
+                                    text = "播放 " + (i + 1) + " · " + shortUrl(u),
                                     style = MiuixTheme.textStyles.footnote2,
                                     color = MiuixTheme.colorScheme.onPrimary,
                                     modifier = Modifier
