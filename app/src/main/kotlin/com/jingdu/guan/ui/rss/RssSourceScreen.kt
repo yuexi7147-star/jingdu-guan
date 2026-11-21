@@ -1,5 +1,7 @@
 package com.jingdu.guan.ui.rss
 
+import top.yukonga.miuix.kmp.icon.extended.Link
+import top.yukonga.miuix.kmp.icon.extended.Report
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -319,7 +321,7 @@ fun RssSourceScreen(
     if (dead.isNotEmpty()) {
         AppAlertDialog(
             title = "已删除 " + dead.size + " 个失效订阅源",
-            message = dead.take(10).joinToString("、") + if (dead.size > 10) " 等" else "",
+            text = dead.take(10).joinToString("、") + if (dead.size > 10) " 等" else "",
             confirmText = "知道了",
             onConfirm = { viewModel.clearDeadReport() },
             onDismissRequest = { viewModel.clearDeadReport() },
@@ -328,7 +330,7 @@ fun RssSourceScreen(
 
 AppAlertDialog(
             title = "用网址创建订阅源",
-            message = "填网站地址或 feed 地址。填网站会自动找它的订阅入口。",
+            text = "填网站地址或 feed 地址。填网站会自动找它的订阅入口。",
             confirmText = "创建",
             onConfirm = {
                 val u = createUrl.trim()
