@@ -53,10 +53,20 @@ class RssSourceScan(
 
     fun clearReport() { _report.value = null }
 
+    private var job: kotlinx.coroutines.Job? = null
+
     /** 手动触发一次；已经在跑就忽略 */
     fun start() {
         if (_running.value) return
-        scope.launch { run() }
+        job = scope.launch { run() }
+    }
+
+    /** 停：已查过的结果不写库，用户重新点会从头来 */
+    fun cancel() {
+        job?.cancel()
+        job = null
+        _running.value = false
+        _progress.value = null
     }
 
     suspend fun run() {

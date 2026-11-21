@@ -247,6 +247,13 @@ class RssSourceViewModel(
 
     fun checkDead() = scan.start()
 
+    fun cancelCheck() = scan.cancel()
+
+    /** 上一轮判死（含需代理但已连删三次）的那些名字，给界面弹一句结果 */
+    val deadSources: StateFlow<List<String>> = scan.report
+        .map { r -> (r?.dead.orEmpty() + r?.needProxy.orEmpty()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     fun clearDeadReport() = scan.clearReport()
 
 
