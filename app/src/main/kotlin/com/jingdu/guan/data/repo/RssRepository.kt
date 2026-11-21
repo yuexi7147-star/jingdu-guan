@@ -1,5 +1,7 @@
 package com.jingdu.guan.data.repo
 
+import com.jingdu.guan.core.source.rss.RssArticle
+import com.jingdu.guan.core.source.rss.RssEngine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import com.jingdu.guan.core.source.SourceHttpClient
@@ -233,4 +235,14 @@ class RssRepository(
         converterVersion = LegadoRssConverter.VERSION,
         updatedAt = updatedAt,
     )
+
+    /**
+     * 源内搜索：走源自己的 searchUrl。
+     *
+     * 结果不入库 —— 它是「临时看一眼」，塞进 rss_article 会把时间线搅乱。
+     */
+    suspend fun searchInSource(sourceId: String, keyword: String, engine: RssEngine): List<RssArticle> {
+        val rule = getRule(sourceId) ?: throw IllegalStateException("订阅源不存在")
+        return engine.search(rule, keyword).items
+    }
 }

@@ -74,6 +74,7 @@ object LegadoRssConverter {
             headerScript = headerScriptOf(src.str("header")),
             sorts = parseSorts(src.str("sortUrl")),
             articles = src.str("ruleArticles"),
+            searchUrl = src.str("searchUrl"),
             nextPage = src.str("ruleNextPage"),
             title = src.str("ruleTitle"),
             description = src.str("ruleDescription"),

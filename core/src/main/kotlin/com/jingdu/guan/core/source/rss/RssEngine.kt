@@ -70,6 +70,24 @@ class RssEngine(
     suspend fun articles(rule: RssSourceRule, sortUrl: String, page: Int = 1): RssArticlePage =
         rssIo { articlesOnIo(rule, sortUrl, page) }
 
+    /**
+     * 源内搜索：走源自己的 searchUrl。
+     *
+     * 关键词填进 {{key}}（阅读的写法），结果页按**列表规则**解析 —— 绝大多数站的搜索结果页
+     * 和列表页同一个模板，另配一套规则的多余的。
+     *
+     * 源没配 searchUrl 就抛 [SourceException]：让界面能说清「这个源不支持搜索」，
+     * 而不是拿列表地址凑一个搜不出东西的假搜索。
+     */
+    suspend fun search(rule: RssSourceRule, keyword: String, page: Int = 1): RssArticlePage =
+        rssIo {
+            val tpl = rule.searchUrl?.takeIf { it.isNotBlank() }
+                ?: throw SourceException("这个源不支持搜索")
+            val key = java.net.URLEncoder.encode(keyword.trim(), "UTF-8")
+            val url = tpl.replace("{{key}}", key)
+            articlesOnIo(rule, url, page)
+        }
+
     private suspend fun articlesOnIo(rule: RssSourceRule, sortUrl: String, page: Int): RssArticlePage {
         val vars = mapOf("baseUrl" to rule.id, "page" to page.toString())
         val js = jsContextOf(rule)

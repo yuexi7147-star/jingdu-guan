@@ -30,6 +30,14 @@ data class RssSourceRule(
     /** 分类。为空时用源地址本身当唯一分类 */
     val sorts: List<RssSort> = emptyList(),
 
+    /**
+     * 源内搜索地址（阅读的 searchUrl）：支持 {{key}} 占位与 {{page}} 分页，也支持 `@js:` 脚本。
+     *
+     * null = 这个源不提供搜索，界面上不给搜索入口 —— 别拿列表地址凑一个假的，
+     * 搜出来的东西对不上关键词，比没有搜索更糟。
+     */
+    val searchUrl: String? = null,
+
     /** 文章列表规则；null = 按标准 RSS/Atom XML 解析 */
     val articles: String? = null,
     val nextPage: String? = null,
