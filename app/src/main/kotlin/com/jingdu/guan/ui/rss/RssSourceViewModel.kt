@@ -258,7 +258,7 @@ class RssSourceViewModel(
             try {
                 val all = repo.sources.first().filter { it.enabled }
                 for (src in all) {
-                    val ok = probe(src.url)
+                    val ok = probe(src.id)  // id 就是源地址
                     if (!ok) {
                         names.add(src.name)
                         ids.add(src.id)
