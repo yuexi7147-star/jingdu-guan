@@ -242,3 +242,6 @@ data class PlayerRoute(
     /** 防盗链用的来源页；从网页嗅到的地址要用它 */
     val referer: String? = null,
 ) : NavKey
+
+/** 发现页：书签集合，点了直接进网页 */
+data object BookmarkRoute : NavKey

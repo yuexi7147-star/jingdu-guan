@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import top.yukonga.miuix.kmp.icon.extended.SearchDevice
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.clickable
 import top.yukonga.miuix.kmp.icon.extended.Link
@@ -85,6 +86,8 @@ fun RssSourceScreen(
     /** 单网页源（阅读的 singleUrl）：点开是网页页，不是文章列表 */
     onOpenWebSource: (String) -> Unit,
     viewModel: RssSourceViewModel,
+    /** 发现页（书签集合） */
+    onOpenBookmarks: () -> Unit = {},
 ) {
     val list by viewModel.list.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -204,6 +207,10 @@ fun RssSourceScreen(
                     }
                     AppIconButton(onClick = { showCreate = true }) {
                         Icon(MiuixIcons.Link, contentDescription = "用网址创建订阅源")
+                    }
+                    // 发现：书签集合，点一行直接进网页
+                    AppIconButton(onClick = { onOpenBookmarks() }) {
+                        Icon(MiuixIcons.SearchDevice, contentDescription = "发现（书签）")
                     }
                     Box {
                         // 导入进行中（粘地址要联网抓 feed）换成转圈：从前这个状态 VM 里有、页面从没读过，点了像没点上

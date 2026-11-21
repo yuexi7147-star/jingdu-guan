@@ -401,6 +401,14 @@ fun InkwellNavDisplay(
                     onBack = { nav.back() },
                 )
             }
+            entry<BookmarkRoute> {
+                val bvm = koinViewModel<com.jingdu.guan.ui.bookmark.BookmarkViewModel>()
+                com.jingdu.guan.ui.bookmark.BookmarkScreen(
+                    onBack = { nav.back() },
+                    onOpenUrl = { u -> nav.go(RssArticleWebRoute(sourceId = u, url = u, title = u)) },
+                    viewModel = bvm,
+                )
+            }
             entry<RssSourceRoute>(
                 metadata = ListDetailSceneStrategy.detailPane(sceneKey = NavPaneGroup.SETTINGS),
             ) {
