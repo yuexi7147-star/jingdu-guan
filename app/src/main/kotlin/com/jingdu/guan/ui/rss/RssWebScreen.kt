@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import android.webkit.JsResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
@@ -357,7 +358,21 @@ private fun SourceWebView(
                 settings.displayZoomControls = false
                 val ua = headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.value
                 if (!ua.isNullOrBlank()) settings.userAgentString = ua
+                // 不给页面开新窗口：弹窗广告全靠这个
+                settings.setSupportMultipleWindows(false)
+                settings.javaScriptCanOpenWindowsAutomatically = false
+
                 webChromeClient = object : WebChromeClient() {
+                    // alert / confirm 自动点掉：它们只挡内容，信息量通常是「请下载 App」
+                    override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
+                        result.confirm(); return true
+                    }
+                    override fun onJsConfirm(view: WebView, url: String, message: String, result: JsResult): Boolean {
+                        result.confirm(); return true
+                    }
+                    // window.open 直接吞掉
+                    override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean = false
+
                     override fun onProgressChanged(view: WebView, newProgress: Int) {
                         progress(newProgress)
                     }
@@ -381,6 +396,10 @@ private fun SourceWebView(
 
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         if (guard.blocksNavigation(request)) return true
+                        // 脚本自己跳的（没有手指参与）一律拦掉 —— 这类站的广告跳转全是这一手
+                        if (!request.hasGesture() && request.url.host != view.url?.let { android.net.Uri.parse(it).host }) {
+                            return true
+                        }
                         return when (request.url.scheme?.lowercase()) {
                             "http", "https" -> false
                             // 不出网、留在页面里的那几种照常
