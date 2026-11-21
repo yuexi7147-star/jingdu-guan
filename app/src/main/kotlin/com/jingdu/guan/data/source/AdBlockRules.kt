@@ -93,4 +93,28 @@ object AdBlockRules {
           } catch (err) { return '0'; }
         })()
     """.trimIndent()
+
+    /**
+     * 追加一轮：处理"点继续/关闭"类的引导层。
+     *
+     * 这类层通常是一个全屏遮罩 + 一个按钮，按钮文案是「继续观看」「关闭广告」「我知道了」。
+     * 直接点掉它（而不是整层删除）—— 有些播放器把它当初始化流程，删了反而不播。
+     */
+    val DISMISS_JS: String = """
+        (function(){
+          try {
+            var killer = ['继续观看','继续播放','关闭广告','我知道了','知道了','跳过','稍后再说','以后再说'];
+            var killed = 0;
+            var btns = document.querySelectorAll('a,button,div,span');
+            for (var i = 0; i < btns.length && killed < 6; i++) {
+              var t = (btns[i].textContent || '').trim();
+              if (t.length > 0 && t.length <= 8 && killer.indexOf(t) >= 0) {
+                btns[i].click();
+                killed++;
+              }
+            }
+            return String(killed);
+          } catch (e) { return '0'; }
+        })()
+    """.trimIndent()
 }

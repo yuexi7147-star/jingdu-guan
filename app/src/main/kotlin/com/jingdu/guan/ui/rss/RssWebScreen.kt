@@ -423,9 +423,10 @@ private fun SourceWebView(
                         // 藏广告位：注入一次样式，后续动态插入的也吃得到
                         view.evaluateJavascript(AD_CSS_JS, null)
                         // 浮层单独清：脚本插入的、内联样式的，CSS 抓不到
-                        listOf(1200L, 4000L, 9000L).forEach { d ->
+                        listOf(1200L, 3000L, 6000L, 10000L, 16000L).forEach { d ->
                             view.postDelayed({
                                 view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
+                                view.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
                             }, d)
                         }
 
