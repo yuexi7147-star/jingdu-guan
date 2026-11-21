@@ -179,19 +179,22 @@ fun RssWebScreen(
                     val url = currentUrl ?: state.url
                     if (url != null) {
                         // 一键净化：点了立刻藏广告、关弹窗、拦跨域跳转；再点恢复
-                        AppIconButton(onClick = {
-                            purifyMode = !purifyMode
-                            if (purifyMode) {
-                                webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
-                                webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
-                                webView?.evaluateJavascript(AD_CSS_JS, null)
-                            }
-                        }) {
-                            Icon(
-                                MiuixIcons.Refresh,
-                                contentDescription = if (purifyMode) "已净化，点击恢复" else "一键净化",
-                            )
-                        }
+                        Text(
+                            text = if (purifyMode) "已净化" else "净化",
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = if (purifyMode) MiuixTheme.colorScheme.primary
+                            else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            modifier = Modifier
+                                .clickable {
+                                    purifyMode = !purifyMode
+                                    if (purifyMode) {
+                                        webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
+                                        webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
+                                        webView?.evaluateJavascript(AD_CSS_JS, null)
+                                    }
+                                }
+                                .padding(horizontal = Dimens.gapM, vertical = Dimens.gapXS),
+                        )
                         AppIconButton(onClick = ::reload) {
                             Icon(MiuixIcons.Refresh, contentDescription = "刷新")
                         }
