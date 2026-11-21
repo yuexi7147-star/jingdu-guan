@@ -49,6 +49,8 @@ data class RssArticleUiState(
     /** 原网页没整理出全文的原因。摘要照旧显示，主按钮换成「在应用内打开原网页」 */
     val fullTextFailure: String? = null,
     val error: String? = null,
+    /** 正文里的视频直链（有的话文章页直接给播放入口，不用绕去网页） */
+    val mediaUrl: String? = null,
 ) {
     /** 原文是个网页，能在应用内打开（脚本地址、data: 地址不是） */
     val hasWebPage: Boolean
@@ -106,6 +108,9 @@ class RssArticleViewModel(
             } else {
                 null
             }
+            // 正文里带视频直链的话，文章页直接给播放入口。
+            // 这类源的内容常是网页原文（带 video 标签），只渲染文字的话用户看不到视频在哪。
+            val mediaUrl = com.jingdu.guan.ui.player.MediaUrlExtractor.extract(description)
             val article = RssArticle(
                 sourceId = args.sourceId,
                 title = args.title,
@@ -125,6 +130,7 @@ class RssArticleViewModel(
                 loading = false,
                 elements = content.elements,
                 fetchingFullText = content.teaser,
+                mediaUrl = mediaUrl,
             )
             if (!content.teaser) return@launch
 

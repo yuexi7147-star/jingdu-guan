@@ -81,6 +81,8 @@ fun RssArticleScreen(
     onBack: () -> Unit,
     onOpenWebPage: (url: String, title: String) -> Unit,
     viewModel: RssArticleViewModel,
+    /** 正文里带视频直链时直接播，不用绕去网页 */
+    onPlayMedia: (url: String, title: String) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val messages = remember { MessageBus() }
@@ -258,6 +260,17 @@ fun RssArticleScreen(
                         if (state.webPageIsPrimary) {
                             PrimaryButton(text = "在应用内打开原网页", onClick = ::openWebPage, modifier = Modifier.fillMaxWidth())
                         } else {
+                            // 正文里若有视频直链，直接播 —— 这类源的内容常带 video 标签，
+                            // 文章页只渲染文字，绕去网页再嗅探是多余的一步
+                            val media = state.mediaUrl
+                            if (media != null) {
+                                SecondaryButton(
+                                    text = "播放视频",
+                                    onClick = { onPlayMedia(media, state.title) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Spacer(Modifier.height(Dimens.gapS))
+                            }
                             SecondaryButton(text = "查看原网页", onClick = ::openWebPage, modifier = Modifier.fillMaxWidth())
                         }
                     }

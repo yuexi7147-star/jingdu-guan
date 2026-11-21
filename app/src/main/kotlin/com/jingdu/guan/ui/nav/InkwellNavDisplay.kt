@@ -448,6 +448,7 @@ fun InkwellNavDisplay(
                 val vm = koinViewModel<RssArticleViewModel> { parametersOf(route.args) }
                 val args = route.args
                 RssArticleScreen(
+                    onPlayMedia = { url, title -> nav.go(PlayerRoute(url, title, "")) },
                     args = args,
                     onBack = { nav.back() },
                     onOpenWebPage = { url, title -> nav.go(RssArticleWebRoute(args.sourceId, url, title)) },
