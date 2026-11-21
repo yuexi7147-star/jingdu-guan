@@ -1,5 +1,7 @@
 package com.jingdu.guan.ui.player
 
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import android.app.Activity

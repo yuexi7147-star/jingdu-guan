@@ -233,6 +233,7 @@ fun RssWebScreen(
                         onHistoryChanged = { canGoBack = it },
                         onMainFrameError = { pageError = it },
                         onSniff = { u -> if (u !in sniffed && sniffed.size < 20) sniffed.add(u) },
+                        purifyMode = purifyMode,
                         onExternalLink = links::open,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -354,6 +355,7 @@ private fun SourceWebView(
     onHistoryChanged: (canGoBack: Boolean) -> Unit,
     onMainFrameError: (String) -> Unit,
     onSniff: (String) -> Unit = {},
+    purifyMode: Boolean = false,
     onExternalLink: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
