@@ -49,6 +49,7 @@ val appModule = module {
     single { get<InkwellDb>().bookSourceHitDao() }
     single { get<InkwellDb>().replaceRuleDao() }
     single { get<InkwellDb>().rssSourceDao() }
+    single { get<InkwellDb>().bookmarkDao() }
     single { get<InkwellDb>().readingStatDao() }
     single { get<InkwellDb>().rssArticleDao() }
     single { com.jingdu.guan.data.repo.ReadingStatsRepository(get(), get(), get()) }

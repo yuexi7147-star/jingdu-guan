@@ -182,37 +182,13 @@ fun RssSourceScreen(
                     },
                     containerColor = pageColor,
                     actions = {
-                        AppIconButton(onClick = viewModel::selectAll) {
-                            Icon(MiuixIcons.SelectAll, contentDescription = "全选")
-                        }
-                    },
-                    bottomContent = listHeader,
-                ) {
-                    ToolbarTitle("已选 ${selected.size} 个")
-                }
-            } else AppToolbar(
-                containerColor = pageColor,
-                actions = {
-                    // 三个动作必须平铺在 actions 里：Miuix 会把它们排成一条胶囊。
-                    // 之前塞进 Box 是错的 —— Box 是叠放容器，三个按钮全叠在同一个点上（只剩一个影子）。
-                    val checking by viewModel.checking.collectAsStateWithLifecycle()
-                    if (checking) {
-                        AppIconButton(onClick = { viewModel.cancelCheck() }) {
-                            AppLoadingIndicator(size = Dimens.buttonSpinner)
-                        }
-                    } else {
-                        AppIconButton(onClick = { viewModel.checkDead() }) {
-                            Icon(MiuixIcons.Report, contentDescription = "一键检测并删除失效源")
-                        }
-                    }
-                    AppIconButton(onClick = { showCreate = true }) {
-                        Icon(MiuixIcons.Link, contentDescription = "用网址创建订阅源")
-                    }
-                    // 发现：书签集合，点一行直接进网页
+                    // 只留两个：发现 + 添加。检测和转源进「添加」的菜单里 ——
+                    // 四个图标挤在一条胶囊里，既不好认也容易点错（点错过一次就闪退）。
                     AppIconButton(onClick = { onOpenBookmarks() }) {
                         Icon(MiuixIcons.SearchDevice, contentDescription = "发现（书签）")
                     }
                     Box {
+
                         // 导入进行中（粘地址要联网抓 feed）换成转圈：从前这个状态 VM 里有、页面从没读过，点了像没点上
                         if (importing) {
                             // 转圈没有名字，读屏只会念「按钮，已停用」：补一句它在干什么
