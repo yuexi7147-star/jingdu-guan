@@ -91,9 +91,13 @@ private const val SNIFF_JS = """
       if (ok(src) && /\.(mp4|m3u8|m4a|mp3|webm)/i.test(src)) return src;
     }
     // 页面本身是 JSON（很多源的链接直接指向 API）：从文本里找媒体地址
-    var body = (document.body && document.body.innerText) || '';
+    // textContent 而不是 innerText：Chrome 的 JSON 查看器把内容放在 shadow DOM 里，
+    // innerText 有时读不到；textContent 能拿到整段原文
+    var body = (document.body && (document.body.textContent || document.body.innerText)) || '';
     if (body.length > 20) {
-      var m = body.match(/https?:[^"'\\s]+?\.(m3u8|mp4|m4a|mp3|webm)(\?[^"'\\s]*)?/i);
+      // JSON 里的地址是 https:\/\/xxx 这样转义的，先把转义斜杠还原
+      var clean = body.replace(/\\\//g, '/');
+      var m = clean.match(/https?:[^"'\s]+?\.(m3u8|mp4|m4a|mp3|webm)([^"'\s]*)?/i);
       if (m && ok(m[0])) return m[0];
     }
     return '';
@@ -179,22 +183,22 @@ fun RssWebScreen(
                     val url = currentUrl ?: state.url
                     if (url != null) {
                         // 一键净化：点了立刻藏广告、关弹窗、拦跨域跳转；再点恢复
-                        Text(
-                            text = if (purifyMode) "已净化" else "净化",
-                            style = MiuixTheme.textStyles.footnote1,
-                            color = if (purifyMode) MiuixTheme.colorScheme.primary
-                            else MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            modifier = Modifier
-                                .clickable {
-                                    purifyMode = !purifyMode
-                                    if (purifyMode) {
-                                        webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
-                                        webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
-                                        webView?.evaluateJavascript(AD_CSS_JS, null)
-                                    }
-                                }
-                                .padding(horizontal = Dimens.gapM, vertical = Dimens.gapXS),
-                        )
+                        // 净化：Blocklist 图标，开着时变成强调色 —— 和旁边的刷新图标形状差得远，不会认错
+                        AppIconButton(onClick = {
+                            purifyMode = !purifyMode
+                            if (purifyMode) {
+                                webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.HIDE_JS, null)
+                                webView?.evaluateJavascript(com.jingdu.guan.data.source.AdBlockRules.DISMISS_JS, null)
+                                webView?.evaluateJavascript(AD_CSS_JS, null)
+                            }
+                        }) {
+                            Icon(
+                                MiuixIcons.Blocklist,
+                                contentDescription = if (purifyMode) "已净化，点击恢复" else "一键净化",
+                                tint = if (purifyMode) MiuixTheme.colorScheme.primary
+                                else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
                         AppIconButton(onClick = ::reload) {
                             Icon(MiuixIcons.Refresh, contentDescription = "刷新")
                         }
