@@ -14,6 +14,7 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -249,31 +250,63 @@ class RssSourceViewModel(
      * 只查启用的 —— 关着的源本来就不参与渲染，删不删由用户在列表里自己决定。
      * 判定用 HTTP 状态码 + 是否拿到正文：只看状态码会被「随便什么路径都回 200」的站骗过。
      */
+    /** 检测进度：已查 / 总数 */
+    private val _checkProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val checkProgress: StateFlow<Pair<Int, Int>?> = _checkProgress
+
+    private var checkJob: Job? = null
+
+    /**
+     * 一键检测：逐个探活，把打不开的源删掉。
+     *
+     * 三条保命规则，缺一条就会误删：
+     * 1. 失败**重试两次**才算死 —— 手机网络抖一下很常见，一次 6 秒超时判死太草率
+     * 2. 边跑边报进度，几百个源要跑几分钟，用户得知道进行到哪
+     * 3. 随时能停，停了已查的照常统计（不半途写库）
+     *
+     * 删除是软删除（deleted=1），数据还在库里；只是界面没有恢复入口。
+     */
     fun checkDead() {
         if (_checking.value) return
-        viewModelScope.launch {
+        checkJob = viewModelScope.launch {
             _checking.value = true
+            _checkProgress.value = 0 to 0
             val names = mutableListOf<String>()
             val ids = mutableListOf<String>()
             try {
                 val all = repo.sources.first().filter { it.enabled }
-                for (src in all) {
-                    val ok = probe(src.id)  // id 就是源地址
+                _checkProgress.value = 0 to all.size
+                all.forEachIndexed { i, src ->
+                    // 连续三次都打不开才算死
+                    var ok = false
+                    repeat(3) { attempt ->
+                        if (ok) return@repeat
+                        ok = probe(src.id)
+                        if (!ok && attempt < 2) kotlinx.coroutines.delay(400)
+                    }
                     if (!ok) {
                         names.add(src.name)
                         ids.add(src.id)
                     }
+                    _checkProgress.value = (i + 1) to all.size
                 }
-                if (ids.isNotEmpty()) {
-                    repo.delete(ids)
-                }
+                if (ids.isNotEmpty()) repo.delete(ids)
                 _deadSources.value = names
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             } finally {
                 _checking.value = false
+                _checkProgress.value = null
             }
         }
+    }
+
+    /** 停止检测：已经查过的不写库，用户重新点会从头来 */
+    fun cancelCheck() {
+        checkJob?.cancel()
+        checkJob = null
+        _checking.value = false
+        _checkProgress.value = null
     }
 
     fun clearDeadReport() { _deadSources.value = emptyList() }

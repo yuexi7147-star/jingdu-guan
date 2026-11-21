@@ -162,8 +162,16 @@ fun RssSourceScreen(
                 actions = {
                     Box {
                         // 一键检测：探活并删掉打不开的源
-                        AppIconButton(onClick = { viewModel.checkDead() }) {
-                            Icon(MiuixIcons.Report, contentDescription = "一键检测失效源")
+                        val checking by viewModel.checking.collectAsStateWithLifecycle()
+                        val progress by viewModel.checkProgress.collectAsStateWithLifecycle()
+                        if (checking) {
+                            AppIconButton(onClick = { viewModel.cancelCheck() }) {
+                                AppLoadingIndicator(size = Dimens.buttonSpinner)
+                            }
+                        } else {
+                            AppIconButton(onClick = { viewModel.checkDead() }) {
+                                Icon(MiuixIcons.Report, contentDescription = "一键检测失效源")
+                            }
                         }
                         // 一键创建：给网址就做成订阅源
                         AppIconButton(onClick = { showCreate = true }) {
