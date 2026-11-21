@@ -1,5 +1,7 @@
 package com.jingdu.guan.ui.rss
 
+import com.jingdu.guan.data.repo.RssSourceScan
+import com.jingdu.guan.data.repo.ScanReport
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
@@ -34,6 +36,8 @@ class RssSourceViewModel(
     private val context: Context,
     private val repo: RssRepository,
     private val feeds: RssFeedRepository,
+    /** 一键检测：统一走扫描器，别在这个页面里再写一套探活 */
+    private val scan: RssSourceScan,
 ) : ViewModel() {
 
     /**
@@ -236,97 +240,15 @@ class RssSourceViewModel(
         }
     }
 
-    /** 一键检测：正在跑 */
-    private val _checking = MutableStateFlow(false)
-    val checking: StateFlow<Boolean> = _checking
+    // ---- 一键检测：委托给 [RssSourceScan]，这里只转发它的状态 ----
+    val checking: StateFlow<Boolean> get() = scan.running
+    val checkProgress: StateFlow<Pair<Int, Int>?> get() = scan.progress
+    val scanReport: StateFlow<ScanReport?> get() = scan.report
 
-    /** 一键检测的结果：失效源的名字 */
-    private val _deadSources = MutableStateFlow<List<String>>(emptyList())
-    val deadSources: StateFlow<List<String>> = _deadSources
+    fun checkDead() = scan.start()
 
-    /**
-     * 一键检测：逐个探活，把打不开的源删掉。
-     *
-     * 只查启用的 —— 关着的源本来就不参与渲染，删不删由用户在列表里自己决定。
-     * 判定用 HTTP 状态码 + 是否拿到正文：只看状态码会被「随便什么路径都回 200」的站骗过。
-     */
-    /** 检测进度：已查 / 总数 */
-    private val _checkProgress = MutableStateFlow<Pair<Int, Int>?>(null)
-    val checkProgress: StateFlow<Pair<Int, Int>?> = _checkProgress
+    fun clearDeadReport() = scan.clearReport()
 
-    private var checkJob: Job? = null
-
-    /**
-     * 一键检测：逐个探活，把打不开的源删掉。
-     *
-     * 三条保命规则，缺一条就会误删：
-     * 1. 失败**重试两次**才算死 —— 手机网络抖一下很常见，一次 6 秒超时判死太草率
-     * 2. 边跑边报进度，几百个源要跑几分钟，用户得知道进行到哪
-     * 3. 随时能停，停了已查的照常统计（不半途写库）
-     *
-     * 删除是软删除（deleted=1），数据还在库里；只是界面没有恢复入口。
-     */
-    fun checkDead() {
-        if (_checking.value) return
-        checkJob = viewModelScope.launch {
-            _checking.value = true
-            _checkProgress.value = 0 to 0
-            val names = mutableListOf<String>()
-            val ids = mutableListOf<String>()
-            try {
-                val all = repo.sources.first().filter { it.enabled }
-                _checkProgress.value = 0 to all.size
-                all.forEachIndexed { i, src ->
-                    // 连续三次都打不开才算死
-                    var ok = false
-                    repeat(3) { attempt ->
-                        if (ok) return@repeat
-                        ok = probe(src.id)
-                        if (!ok && attempt < 2) kotlinx.coroutines.delay(400)
-                    }
-                    if (!ok) {
-                        names.add(src.name)
-                        ids.add(src.id)
-                    }
-                    _checkProgress.value = (i + 1) to all.size
-                }
-                if (ids.isNotEmpty()) repo.delete(ids)
-                _deadSources.value = names
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            } finally {
-                _checking.value = false
-                _checkProgress.value = null
-            }
-        }
-    }
-
-    /** 停止检测：已经查过的不写库，用户重新点会从头来 */
-    fun cancelCheck() {
-        checkJob?.cancel()
-        checkJob = null
-        _checking.value = false
-        _checkProgress.value = null
-    }
-
-    fun clearDeadReport() { _deadSources.value = emptyList() }
-
-    /** 探活：能不能打开、有没有正文 */
-    private suspend fun probe(url: String): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 6000
-                readTimeout = 6000
-                instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14)")
-            }
-            val code = conn.responseCode
-            val len = conn.contentLengthLong
-            conn.disconnect()
-            code in 200..399 && (len != 0L)
-        }.getOrDefault(false)
-    }
 
     /**
      * 一键创建：给个网址就做成订阅源。

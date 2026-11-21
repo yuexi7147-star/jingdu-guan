@@ -40,8 +40,9 @@ val appModule = module {
     }
     single { com.jingdu.guan.data.repo.SourceQuarantine(androidContext()) }
     single { com.jingdu.guan.data.repo.SuspiciousCounter(androidContext()) }
-    single { com.jingdu.guan.data.repo.SourceLightCheck(get()) }
-    single { com.jingdu.guan.data.repo.SourceAutoCheck(androidContext(), get(), get(), get(), get(), get()) }
+    single { com.jingdu.guan.data.repo.SourceLightCheck() }
+    single { com.jingdu.guan.data.repo.RssSourceScan(get(), get(), get(), get()) }
+    single { com.jingdu.guan.data.repo.SourceAutoCheck(androidContext(), get(), get(), get(), get()) }
     single { com.jingdu.guan.data.repo.SourceAuditService(get(), get()) }
     single { get<InkwellDb>().bookDao() }
     single { get<InkwellDb>().chapterDao() }
@@ -173,7 +174,7 @@ val appModule = module {
     viewModel { com.jingdu.guan.ui.settings.DeveloperViewModel(get(), get()) }
     viewModel { com.jingdu.guan.ui.stats.ReadingStatsViewModel(get(), get()) }
     viewModel { com.jingdu.guan.ui.replace.ReplaceRuleViewModel(androidContext(), get(), get(), get()) }
-    viewModel { com.jingdu.guan.ui.rss.RssSourceViewModel(androidContext(), get(), get()) }
+    viewModel { com.jingdu.guan.ui.rss.RssSourceViewModel(androidContext(), get(), get(), get()) }
     // 空串 = 看「全部」（Koin 的参数别传 null）
     viewModel { com.jingdu.guan.ui.player.PlayerViewModel() }
     viewModel { com.jingdu.guan.ui.bookmark.BookmarkViewModel(get()) }
