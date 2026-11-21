@@ -32,6 +32,7 @@ data class ScanReport(
  * - Alive → 清零计数
  */
 class RssSourceScan(
+    private val context: android.content.Context,
     private val repo: RssRepository,
     private val lightCheck: SourceLightCheck,
     private val counter: SuspiciousCounter,
@@ -71,6 +72,8 @@ class RssSourceScan(
         val toDelete = mutableListOf<String>()
 
         try {
+            // 这一轮有没有走代理 —— 决定「连不上」该不该算账
+            val proxied = ProxyState.isProxyActive(context)
             val all = repo.sources.first().filter { it.enabled }
             _progress.value = 0 to all.size
 
@@ -82,8 +85,13 @@ class RssSourceScan(
                     }
                     is SourceLightCheck.Verdict.NeedProxy -> {
                         val fails = counter.bump(src.id)
-                        needProxy.add(src.name + "（" + v.reason + "，连续 " + fails + " 次）")
-                        if (fails >= SuspiciousCounter.MAX_SUSPICIOUS) toDelete.add(src.id)
+                        val tail = if (proxied) "，连续 " + fails + " 次" else "，当前无代理"
+                        needProxy.add(src.name + "（" + v.reason + tail + "）")
+                        // 只有挂了代理还连不上才算真有问题；没代理时这一档
+                        // 混着「被墙」和「网络差」，删了用户换网络也找不回来
+                        if (proxied && fails >= SuspiciousCounter.MAX_SUSPICIOUS) {
+                            toDelete.add(src.id)
+                        }
                     }
                     SourceLightCheck.Verdict.Alive -> {
                         alive++

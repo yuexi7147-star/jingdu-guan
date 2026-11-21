@@ -41,7 +41,7 @@ val appModule = module {
     single { com.jingdu.guan.data.repo.SourceQuarantine(androidContext()) }
     single { com.jingdu.guan.data.repo.SuspiciousCounter(androidContext()) }
     single { com.jingdu.guan.data.repo.SourceLightCheck() }
-    single { com.jingdu.guan.data.repo.RssSourceScan(get(), get(), get(), get()) }
+    single { com.jingdu.guan.data.repo.RssSourceScan(androidContext(), get(), get(), get(), get()) }
     single { com.jingdu.guan.data.repo.SourceAutoCheck(androidContext(), get(), get(), get(), get()) }
     single { com.jingdu.guan.data.repo.SourceAuditService(get(), get()) }
     single { get<InkwellDb>().bookDao() }
