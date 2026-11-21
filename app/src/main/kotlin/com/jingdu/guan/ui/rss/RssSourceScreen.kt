@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import androidx.compose.foundation.clickable
 import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Report
 import androidx.activity.compose.BackHandler
@@ -117,6 +118,34 @@ fun RssSourceScreen(
     // 搜索框 + 筛选压在标题下面（顶栏的 bottomContent），同来源管理、净化替换。进出多选的两条栏都带上它，栏高不变
     val current = list
     val listHeader: @Composable () -> Unit = {
+        // 检测进度：几百个源要跑几分钟，得让人看见进行到哪、也能停下
+        val checkingNow by viewModel.checking.collectAsStateWithLifecycle()
+        val checkProg by viewModel.checkProgress.collectAsStateWithLifecycle()
+        if (checkingNow) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Dimens.screenPadding, vertical = Dimens.gapS),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                val p = checkProg
+                Text(
+                    text = if (p == null || p.second == 0) "正在检测…"
+                    else "正在检测 " + p.first + " / " + p.second,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "停止",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { viewModel.cancelCheck() }
+                        .padding(horizontal = Dimens.gapS, vertical = Dimens.gapXS),
+                )
+            }
+        }
         if (current != null && current.all.isNotEmpty()) {
             ListSearchHeader(
                 query = query,
@@ -160,23 +189,22 @@ fun RssSourceScreen(
             } else AppToolbar(
                 containerColor = pageColor,
                 actions = {
+                    // 三个动作必须平铺在 actions 里：Miuix 会把它们排成一条胶囊。
+                    // 之前塞进 Box 是错的 —— Box 是叠放容器，三个按钮全叠在同一个点上（只剩一个影子）。
+                    val checking by viewModel.checking.collectAsStateWithLifecycle()
+                    if (checking) {
+                        AppIconButton(onClick = { viewModel.cancelCheck() }) {
+                            AppLoadingIndicator(size = Dimens.buttonSpinner)
+                        }
+                    } else {
+                        AppIconButton(onClick = { viewModel.checkDead() }) {
+                            Icon(MiuixIcons.Report, contentDescription = "一键检测并删除失效源")
+                        }
+                    }
+                    AppIconButton(onClick = { showCreate = true }) {
+                        Icon(MiuixIcons.Link, contentDescription = "用网址创建订阅源")
+                    }
                     Box {
-                        // 一键检测：探活并删掉打不开的源
-                        val checking by viewModel.checking.collectAsStateWithLifecycle()
-                        val progress by viewModel.checkProgress.collectAsStateWithLifecycle()
-                        if (checking) {
-                            AppIconButton(onClick = { viewModel.cancelCheck() }) {
-                                AppLoadingIndicator(size = Dimens.buttonSpinner)
-                            }
-                        } else {
-                            AppIconButton(onClick = { viewModel.checkDead() }) {
-                                Icon(MiuixIcons.Report, contentDescription = "一键检测失效源")
-                            }
-                        }
-                        // 一键创建：给网址就做成订阅源
-                        AppIconButton(onClick = { showCreate = true }) {
-                            Icon(MiuixIcons.Link, contentDescription = "用网址创建订阅源")
-                        }
                         // 导入进行中（粘地址要联网抓 feed）换成转圈：从前这个状态 VM 里有、页面从没读过，点了像没点上
                         if (importing) {
                             // 转圈没有名字，读屏只会念「按钮，已停用」：补一句它在干什么
