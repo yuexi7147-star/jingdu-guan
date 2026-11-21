@@ -290,6 +290,16 @@ fun RssWebScreen(
                                             .clickable { onPlay(u, currentUrl, state.title); sniffed.clear() },
                                     )
                                     Text(
+                                        "外部",
+                                        style = MiuixTheme.textStyles.footnote2,
+                                        color = MiuixTheme.colorScheme.onPrimary,
+                                        modifier = Modifier
+                                            .clickable {
+                                                com.jingdu.guan.data.source.MediaOpenExternal
+                                                    .open(context, u, "用其他应用打开")
+                                            }
+                                            .padding(horizontal = Dimens.gapS),
+                                    Text(
                                         "下载",
                                         style = MiuixTheme.textStyles.footnote2,
                                         color = MiuixTheme.colorScheme.onPrimary,
