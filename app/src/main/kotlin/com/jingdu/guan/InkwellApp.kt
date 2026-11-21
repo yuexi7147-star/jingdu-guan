@@ -40,8 +40,31 @@ class InkwellApp : Application(), SingletonImageLoader.Factory {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /**
+     * 崩溃日志落盘。
+     *
+     * 用户手机上读不到 logcat（没有 root、Android 11 起也拿不到别人的日志），
+     * 出问题只能靠两个字猜。装一个默认异常处理器，把堆栈写到公共目录。
+     */
+    private fun installCrashLogger() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            runCatching {
+                val dir = java.io.File("/sdcard/Download/DSH-Go")
+                dir.mkdirs()
+                val f = java.io.File(dir, "豆见崩溃.log")
+                val sw = java.io.StringWriter()
+                error.printStackTrace(java.io.PrintWriter(sw))
+                val ts = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+                f.appendText("===== " + ts + " =====" + NL + sw.toString() + NL)
+            }
+            previous?.uncaughtException(thread, error)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        installCrashLogger()
         UsageLog.initialize(
             filesDir.resolve("logs/usage"),
             runCatching { packageManager.getPackageInfo(packageName, 0).versionName.orEmpty() }.getOrDefault("unknown"),
