@@ -90,6 +90,12 @@ private const val SNIFF_JS = """
       var src = all[j].src || '';
       if (ok(src) && /\.(mp4|m3u8|m4a|mp3|webm)/i.test(src)) return src;
     }
+    // 页面本身是 JSON（很多源的链接直接指向 API）：从文本里找媒体地址
+    var body = (document.body && document.body.innerText) || '';
+    if (body.length > 20) {
+      var m = body.match(/https?:[^"'\\s]+?\.(m3u8|mp4|m4a|mp3|webm)(\?[^"'\\s]*)?/i);
+      if (m && ok(m[0])) return m[0];
+    }
     return '';
   } catch (e) { return ''; }
 })()
