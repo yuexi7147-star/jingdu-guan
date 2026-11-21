@@ -1,5 +1,7 @@
 package com.jingdu.guan.data.db
 
+import com.jingdu.guan.data.db.dao.BookmarkDao
+import com.jingdu.guan.data.db.entity.BookmarkEntity
 import androidx.room3.Database
 import androidx.room3.RoomDatabase
 import androidx.room3.migration.Migration
@@ -35,8 +37,9 @@ import com.jingdu.guan.data.db.entity.SourceReadHealthEntity
         ReadingStatEntity::class,
         RssArticleEntity::class,
         SourceReadHealthEntity::class,
+        BookmarkEntity::class,
     ],
-    version = 23,
+    version = 24,
     exportSchema = true,
 )
 abstract class InkwellDb : RoomDatabase() {
@@ -46,11 +49,30 @@ abstract class InkwellDb : RoomDatabase() {
     abstract fun bookSourceHitDao(): BookSourceHitDao
     abstract fun replaceRuleDao(): ReplaceRuleDao
     abstract fun rssSourceDao(): RssSourceDao
+    abstract fun bookmarkDao(): BookmarkDao
     abstract fun readingStatDao(): ReadingStatDao
     abstract fun rssArticleDao(): RssArticleDao
     abstract fun sourceReadHealthDao(): SourceReadHealthDao
 
     companion object {
+        /** 24：书签表（发现页） */
+        val MIGRATION_23_24 = object : Migration(23, 24) {
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS bookmark (
+                        url TEXT NOT NULL PRIMARY KEY,
+                        title TEXT NOT NULL DEFAULT '',
+                        icon TEXT NOT NULL DEFAULT '',
+                        groupName TEXT NOT NULL DEFAULT '',
+                        sortOrder INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+            }
+        }
+
         val MIGRATION_22_23 = object : Migration(22, 23) {
             override suspend fun migrate(connection: SQLiteConnection) {
                 connection.execSQL("ALTER TABLE book_source ADD COLUMN searchAt INTEGER NOT NULL DEFAULT 0")
@@ -387,6 +409,7 @@ abstract class InkwellDb : RoomDatabase() {
             MIGRATION_20_21,
             MIGRATION_21_22,
             MIGRATION_22_23,
+            MIGRATION_23_24,
         )
     }
 }
