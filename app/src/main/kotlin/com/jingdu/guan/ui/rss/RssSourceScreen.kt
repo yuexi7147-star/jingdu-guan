@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.clickable
 import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Report
