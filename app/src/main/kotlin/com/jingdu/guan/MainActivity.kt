@@ -1,5 +1,9 @@
 package com.jingdu.guan
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import android.content.Intent
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -81,10 +85,18 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 }
             }
             InkwellTheme(config = themeConfig) {
-                InkwellNavDisplay(
-                    externalBook = externalBooks.firstOrNull(),
-                    onExternalBookHandled = { request -> externalBooks = externalBooks.filterNot { it === request } },
-                )
+                // 启动动画盖在导航上面：1.2 秒后自己让开。
+                // 不用系统 splash 直接切 —— 那样是一张静态图标硬断到主界面，太生硬。
+                var splashDone by remember { mutableStateOf(false) }
+                Box(Modifier.fillMaxSize()) {
+                    InkwellNavDisplay(
+                        externalBook = externalBooks.firstOrNull(),
+                        onExternalBookHandled = { request -> externalBooks = externalBooks.filterNot { it === request } },
+                    )
+                    if (!splashDone) {
+                        com.jingdu.guan.ui.splash.SplashScreen(onFinish = { splashDone = true })
+                    }
+                }
             }
         }
     }
