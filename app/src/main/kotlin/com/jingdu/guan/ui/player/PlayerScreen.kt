@@ -1,5 +1,7 @@
 package com.jingdu.guan.ui.player
 
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.view.ViewGroup
@@ -161,7 +163,30 @@ fun PlayerScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .onPreviewKeyEvent { ev ->
+                // 音量键调播放音量：视频里最顺手的调音量方式，别让人去划屏幕
+                if (ev.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                    when (ev.key) {
+                        androidx.compose.ui.input.key.Key.VolumeUp -> {
+                            player.volume = (player.volume + 0.1f).coerceIn(0f, 1f)
+                            hud = "音量 " + (player.volume * 100).toInt() + "%"
+                            true
+                        }
+                        androidx.compose.ui.input.key.Key.VolumeDown -> {
+                            player.volume = (player.volume - 0.1f).coerceIn(0f, 1f)
+                            hud = "音量 " + (player.volume * 100).toInt() + "%"
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            }
+            .focusable(),
+    ) {
         // ---- 画面：铺满整屏 ----
         AndroidView(
             factory = { ctx ->
@@ -202,10 +227,10 @@ fun PlayerScreen(
                             dragAccum += drag.x
                             val w = size.width.coerceAtLeast(1)
                             val h = size.height.coerceAtLeast(1)
-                            if (kotlin.math.abs(dragAccum) > kotlin.math.abs(drag.y) * 3) {
+                            if (kotlin.math.abs(dragAccum) > SEEK_START_SLOP && kotlin.math.abs(dragAccum) > kotlin.math.abs(drag.y) * 2.5) {
                                 val dur = player.duration.coerceAtLeast(0)
                                 if (dur > 0) {
-                                    val delta = (dragAccum / w * dur * 0.5).toLong()
+                                    val delta = (dragAccum / w * dur * SEEK_SENSITIVITY).toLong()
                                     val target = (startPosMs + delta).coerceIn(0, dur)
                                     player.seekTo(target)
                                     hud = formatTime(target)
@@ -359,6 +384,13 @@ private fun CtrlButton(label: String, onClick: () -> Unit) {
             .padding(horizontal = Dimens.gapS, vertical = Dimens.gapS),
     )
 }
+
+
+/** 横划调进度的灵敏度：拖满整屏 = 半个视频长度。再高就一碰就飞，太低又拖不动 */
+private const val SEEK_SENSITIVITY = 0.32f
+
+/** 横划多少像素才开始调进度：太小会把竖划的抖动误判成横划 */
+private const val SEEK_START_SLOP = 24f
 
 private fun formatSpeed(sp: Float): String {
     val s = sp.toString().trimEnd('0').trimEnd('.')
