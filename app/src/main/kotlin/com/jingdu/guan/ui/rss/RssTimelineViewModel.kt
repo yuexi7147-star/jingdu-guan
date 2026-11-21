@@ -65,6 +65,7 @@ class RssTimelineViewModel(
     private val repo: RssRepository,
     private val feeds: RssFeedRepository,
     private val articleDao: com.jingdu.guan.data.db.dao.RssArticleDao,
+    private val engine: com.jingdu.guan.core.source.rss.RssEngine,
 ) : ViewModel() {
 
     private data class Selection(val sourceId: String?, val sortIndex: Int)
@@ -270,31 +271,29 @@ class RssTimelineViewModel(
      * 找不到就给 null，页面照旧进文章页 —— 图文条目本来就没有视频。
      * 这里只在**点击时**读一次库，列表滚动时不碰 description（那个字段可能有几十 KB）。
      */
+    /**
+     * 这条能不能直接播：跑源的正文规则，看它输出的是不是一条视频直链。
+     *
+     * 必须真的跑 ruleContent —— 视频源（type=2）的地址就是脚本现算出来的，
+     * 只在已存的正文里正则找 .m3u8 是找不到的（正文里根本没写）。
+     */
     suspend fun mediaUrlOf(item: TimelineItem): String? {
         val row = item.row
-        val html = runCatching { articleDao.getDescription(row.feed, row.articleKey) }.getOrNull()
-        return com.jingdu.guan.ui.player.MediaUrlExtractor.extract(html)
-    }
-
-
-    /**
-     * 点一条：有视频直链就播，没有就进文章页。
-     *
-     * 分流放在 ViewModel 里 —— 读 description 是 suspend，界面层拿不到 viewModelScope。
-     */
-    fun openOrPlay(
-        item: TimelineItem,
-        onPlay: (url: String, title: String, subtitle: String) -> Unit,
-        onArticle: (RssArticleArgs) -> Unit,
-    ) {
-        viewModelScope.launch {
-            val media = mediaUrlOf(item)
-            if (media != null) {
-                onPlay(media, item.row.title, item.sourceName.orEmpty())
-            } else {
-                onArticle(open(item))
-            }
-        }
+        return runCatching {
+            val rule = repo.getRule(row.sourceId) ?: return@runCatching null
+            val desc = articleDao.getDescription(row.feed, row.articleKey)
+            val article = com.jingdu.guan.core.source.rss.RssArticle(
+                sourceId = row.sourceId,
+                title = row.title,
+                link = row.link,
+                description = desc,
+                pubDate = row.pubDate,
+            )
+            // 直接问引擎要内容：它会跑 ruleContent
+            val content = engine.content(rule, article)
+            content.mediaUrl
+                ?: com.jingdu.guan.ui.player.MediaUrlExtractor.extract(desc)
+        }.getOrNull()
     }
 
     fun open(item: TimelineItem): RssArticleArgs {

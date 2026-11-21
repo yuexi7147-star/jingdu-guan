@@ -160,9 +160,14 @@ class RssEngine(
             val js = jsContextOf(rule)
             val fetched = fetch(rule, article.link, mapOf("baseUrl" to rule.id), js)
             val ctx = EvalContext.page(fetched.bodyText, fetched.finalUrl, js = js)
-            val html = evaluator.evalToString(LegadoRuleAnalyzer.analyze(rule.content), ctx)
-            if (!html.isNullOrBlank()) {
-                val body = Jsoup.parseBodyFragment(html, fetched.finalUrl).body()
+            val raw = evaluator.evalToString(LegadoRuleAnalyzer.analyze(rule.content), ctx)
+            if (!raw.isNullOrBlank()) {
+                val t = raw.trim()
+                // 纯地址：视频源的正文本体就是这样，直接当播放地址
+                if ((t.startsWith("http://", true) || t.startsWith("https://", true)) && !t.contains("<")) {
+                    return RssContent(emptyList(), teaser = false, mediaUrl = t)
+                }
+                val body = Jsoup.parseBodyFragment(t, fetched.finalUrl).body()
                 val elements = htmlToElements.convert(body)
                 if (elements.isNotEmpty()) return RssContent(elements, teaser = false)
             }
@@ -255,6 +260,13 @@ class RssEngine(
 data class RssContent(
     val elements: List<ContentElement>,
     val teaser: Boolean,
+    /**
+     * 视频/音频直链。
+     *
+     * type=2 的视频源正文规则 ruleContent 输出的是一条纯 URL，不是 HTML ——
+     * 交给 Jsoup 解析会变成文本节点，转 elements 时被丢掉。这里单独认出来。
+     */
+    val mediaUrl: String? = null,
 )
 
 /** 原网页整理出来的全文至少这么多字，才替掉摘要 */

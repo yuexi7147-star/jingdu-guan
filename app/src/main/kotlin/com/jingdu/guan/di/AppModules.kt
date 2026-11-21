@@ -177,7 +177,7 @@ val appModule = module {
     // 空串 = 看「全部」（Koin 的参数别传 null）
     viewModel { com.jingdu.guan.ui.player.PlayerViewModel() }
     viewModel { com.jingdu.guan.ui.bookmark.BookmarkViewModel(get()) }
-    viewModel { (sourceId: String) -> com.jingdu.guan.ui.rss.RssTimelineViewModel(sourceId.ifBlank { null }, get(), get(), get()) }
+    viewModel { (sourceId: String) -> com.jingdu.guan.ui.rss.RssTimelineViewModel(sourceId.ifBlank { null }, get(), get(), get(), get()) }
     // 后两个：文章的原网页才有的地址、标题；单网页源传空串（参数按位置解构，两个入口都得传满三个）
     viewModel { (sourceId: String, url: String, title: String) ->
         com.jingdu.guan.ui.rss.RssWebViewModel(sourceId, get(), url.ifBlank { null }, title.ifBlank { null })
