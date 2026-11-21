@@ -78,6 +78,14 @@ class InkwellApp : Application(), SingletonImageLoader.Factory {
                 .collect { on -> withContext(Dispatchers.IO) { if (on) recorder.start() else recorder.stop() } }
         }
 
+        // 首次启动内置几个能用的订阅源：用户第一次打开不是空列表。
+        // 只导一次 —— 每次都导会把用户删掉的源又加回来。
+        appScope.launch {
+            runCatching {
+                com.jingdu.guan.data.repo.BuiltinSources.importOnce(this@InkwellApp, koin.get<RssRepository>())
+            }
+        }
+
         // 首次启动预置几条常见的广告净化规则（默认关闭，用户自己决定开哪条）
         appScope.launch {
             runCatching {
