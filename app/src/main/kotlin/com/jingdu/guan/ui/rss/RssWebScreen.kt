@@ -1,5 +1,9 @@
 package com.jingdu.guan.ui.rss
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.draw.clip
@@ -271,15 +275,39 @@ fun RssWebScreen(
                             Modifier
                                 .align(Alignment.TopCenter)
                                 .padding(top = Dimens.touchTarget)
+                                .fillMaxWidth()
+                                .padding(horizontal = Dimens.gapM)
                                 .background(MiuixTheme.colorScheme.primary, AppShapes.medium)
                                 .padding(Dimens.gapS),
                         ) {
-                            Text(
-                                "找到 " + sniffed.size + " 个地址",
-                                style = MiuixTheme.textStyles.footnote1,
-                                color = MiuixTheme.colorScheme.onPrimary,
-                            )
-                            sniffed.take(6).forEachIndexed { i, u ->
+                            // 标题行带关闭：从前进来了就退不出去，只能点地址跳走
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "找到 " + sniffed.size + " 个地址",
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    "关闭",
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onPrimary,
+                                    modifier = Modifier
+                                        .clickable { sniffed.clear() }
+                                        .padding(horizontal = Dimens.gapS, vertical = Dimens.gapXS),
+                                )
+                            }
+                            // 高度封顶 + 可滑：一个页面能嗅到五六个地址，不限高就把整页盖住了
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 380.dp)
+                                    .verticalScroll(rememberScrollState()),
+                            ) {
+                            sniffed.forEachIndexed { i, u ->
                                 Column(
                                     Modifier
                                         .fillMaxWidth()
@@ -311,6 +339,7 @@ fun RssWebScreen(
                                         }
                                     }
                                 }
+                            }
                             }
                         }
                     }
