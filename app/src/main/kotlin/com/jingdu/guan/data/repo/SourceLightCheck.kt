@@ -11,8 +11,9 @@ import java.net.URI
  *
  * 四档判定（照鲸读的 SourceLightCheck，那套在几百个源上跑过）：
  * - [Verdict.Alive]      页面能打开 → 有效
- * - [Verdict.Dead]       域名没了 / 404 → 确定失效，可以删
- * - [Verdict.NeedProxy]  401/403/超时 → **可能是被墙或要代理**，也可能只是抽风，不能直接删
+ * - [Verdict.Dead]       **只有 HTTP 404/410** → 确定失效，可以删。
+ *                        域名解析失败不归这一档：那可能是污染（需要代理），判死会白删
+ * - [Verdict.NeedProxy]  401/403/超时/解析失败 → **可能被墙或要代理**，不能直接删
  * - [Verdict.Unknown]    地址本身有问题 → 什么都不做
  *
  * 「需要代理」单独一档是这套的关键：这类站不是坏了，是这台网络到不了。
@@ -39,9 +40,12 @@ class SourceLightCheck {
             ?: return@withContext Verdict.Unknown
         if (host.isBlank()) return@withContext Verdict.Unknown
 
-        // 域名解析不出来 = 站没了（或被 DNS 污染，两种都归 Dead，检查报告里会写原因）
+        // 域名解析不出来：**不能算确定失效**。
+        // DNS 污染和域名过期在技术上分不出来 —— 都表现为解析失败，
+        // 而污染恰恰是最常见的「需要代理」，判死就把用户的源白删了（内置的 MissAV 就这么没的）。
+        // 所以这里归到 NeedProxy：没代理时一个都不删，有代理再谈。
         if (!runCatching { InetAddress.getByName(host) }.isSuccess) {
-            return@withContext Verdict.Dead("域名解析失败")
+            return@withContext Verdict.NeedProxy("域名解析失败（可能被污染）")
         }
 
         val full = if (trimmed.startsWith("http")) trimmed else "https://" + trimmed
@@ -66,7 +70,8 @@ class SourceLightCheck {
             }
         }.getOrElse { e ->
             val msg = e.message ?: ""
-            if (msg.contains("UnknownHost", true)) Verdict.Dead("域名解析失败")
+            // 同样：UnknownHost 可能是污染，不是站死了
+            if (msg.contains("UnknownHost", true)) Verdict.NeedProxy("域名解析失败（可能被污染）")
             else Verdict.NeedProxy("连不上（" + msg.take(24) + "）")
         }
     }
