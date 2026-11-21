@@ -418,6 +418,7 @@ fun InkwellNavDisplay(
                     // 点一个源 = 只看它的订阅页（同一个页，chip 停在这个源上）
                     onOpenSource = { nav.go(RssTimelineRoute(it)) },
                     onOpenWebSource = { nav.go(RssWebRoute(it)) },
+                    onOpenBookmarks = { nav.go(BookmarkRoute) },
                     viewModel = vm,
                 )
             }
