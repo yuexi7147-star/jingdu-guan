@@ -277,40 +277,35 @@ fun RssWebScreen(
                                 color = MiuixTheme.colorScheme.onPrimary,
                             )
                             sniffed.take(6).forEachIndexed { i, u ->
-                                Row(
-                                    Modifier.fillMaxWidth().padding(vertical = Dimens.gapXS),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = Dimens.gapXS),
                                 ) {
                                     Text(
                                         text = (i + 1).toString() + ". " + shortUrl(u),
                                         style = MiuixTheme.textStyles.footnote2,
                                         color = MiuixTheme.colorScheme.onPrimary,
                                         maxLines = 1,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clickable { onPlay(u, currentUrl, state.title); sniffed.clear() },
                                     )
-                                    // 两个动作做成图标按钮：文字「外部」「下载」在深色条上不显眼，
-                                    // 也不像能点的东西
-                                    AppIconButton(onClick = {
-                                        com.jingdu.guan.data.source.MediaOpenExternal
-                                            .open(context, u, "用其他应用打开")
-                                    }) {
-                                        Icon(
-                                            MiuixIcons.Forward,
-                                            contentDescription = "用其他应用打开",
-                                            tint = MiuixTheme.colorScheme.onPrimary,
-                                        )
-                                    }
-                                    AppIconButton(onClick = {
-                                        com.jingdu.guan.data.source.MediaDownloader
-                                            .enqueue(context, u, currentUrl, state.title)
-                                    }) {
-                                        Icon(
-                                            MiuixIcons.Copy,
-                                            contentDescription = "下载这个地址",
-                                            tint = MiuixTheme.colorScheme.onPrimary,
-                                        )
+                                    Spacer(Modifier.height(Dimens.gapXS))
+                                    // 三个动作写明白：光两个图标没人认得出哪个是外部播放
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Dimens.gapS),
+                                    ) {
+                                        SniffAction("内置播放") {
+                                            onPlay(u, currentUrl, state.title)
+                                            sniffed.clear()
+                                        }
+                                        SniffAction("外部播放") {
+                                            com.jingdu.guan.data.source.MediaOpenExternal
+                                                .open(context, u, "用其他应用打开")
+                                        }
+                                        SniffAction("下载") {
+                                            com.jingdu.guan.data.source.MediaDownloader
+                                                .enqueue(context, u, currentUrl, state.title)
+                                        }
                                     }
                                 }
                             }
@@ -363,6 +358,21 @@ fun RssWebScreen(
  * - `weixin://`、`intent://` 这类拉起别的应用的链接、下载，交给 [onExternalLink]（先问一句再跳）。
  */
 @SuppressLint("SetJavaScriptEnabled")
+
+/** 嗅探结果里的一个动作：写明白字的胶囊按钮，别让人猜图标 */
+@Composable
+private fun SniffAction(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        style = MiuixTheme.textStyles.footnote2,
+        color = MiuixTheme.colorScheme.onPrimary,
+        modifier = Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .background(MiuixTheme.colorScheme.onPrimary.copy(alpha = 0.18f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = Dimens.gapM, vertical = Dimens.gapXS),
+    )
+}
 @Composable
 private fun SourceWebView(
     url: String,
