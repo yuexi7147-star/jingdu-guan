@@ -421,7 +421,7 @@ fun InkwellNavDisplay(
                 com.jingdu.guan.ui.rss.RssWebScreen(
                     onBack = { nav.back() },
                     viewModel = vm,
-                    onPlay = { url, ref -> nav.go(PlayerRoute(url, "网页视频", "", ref)) },
+                    onPlay = { url, ref, t -> nav.go(PlayerRoute(url, t.ifBlank { "视频" }, "", ref)) },
                 )
             }
             // 订阅自己一组（NavPaneGroup.RSS）：宽屏下订阅页在左、文章在右，原网页再叠一栏。
@@ -463,7 +463,7 @@ fun InkwellNavDisplay(
                 com.jingdu.guan.ui.rss.RssWebScreen(
                     onBack = { nav.back() },
                     viewModel = vm,
-                    onPlay = { url, ref -> nav.go(PlayerRoute(url, "网页视频", "", ref)) },
+                    onPlay = { url, ref, t -> nav.go(PlayerRoute(url, t.ifBlank { "视频" }, "", ref)) },
                 )
             }
             entry<ReplaceRuleRoute>(
