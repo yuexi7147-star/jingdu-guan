@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableStateListOf
@@ -134,6 +135,7 @@ fun RssWebScreen(
     onPlay: (url: String, referer: String?, title: String) -> Unit = { _, _, _ -> },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val messages = remember { MessageBus() }
     val snackbar = remember { SnackbarHostState() }
     CollectMessages(messages, snackbar)
@@ -254,15 +256,31 @@ fun RssWebScreen(
                                 color = MiuixTheme.colorScheme.onPrimary,
                             )
                             sniffed.take(6).forEachIndexed { i, u ->
-                                Text(
-                                    text = "播放 " + (i + 1) + " · " + shortUrl(u),
-                                    style = MiuixTheme.textStyles.footnote2,
-                                    color = MiuixTheme.colorScheme.onPrimary,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onPlay(u, currentUrl, state.title); sniffed.clear() }
-                                        .padding(vertical = Dimens.gapXS),
-                                )
+                                Row(
+                                    Modifier.fillMaxWidth().padding(vertical = Dimens.gapXS),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = (i + 1).toString() + ". " + shortUrl(u),
+                                        style = MiuixTheme.textStyles.footnote2,
+                                        color = MiuixTheme.colorScheme.onPrimary,
+                                        maxLines = 1,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { onPlay(u, currentUrl, state.title); sniffed.clear() },
+                                    )
+                                    Text(
+                                        "下载",
+                                        style = MiuixTheme.textStyles.footnote2,
+                                        color = MiuixTheme.colorScheme.onPrimary,
+                                        modifier = Modifier
+                                            .clickable {
+                                                com.jingdu.guan.data.source.MediaDownloader
+                                                    .enqueue(context, u, currentUrl, state.title)
+                                            }
+                                            .padding(horizontal = Dimens.gapS),
+                                    )
+                                }
                             }
                         }
                     }
