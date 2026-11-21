@@ -169,7 +169,28 @@ class InkwellApp : Application(), SingletonImageLoader.Factory {
                 // 封面地址来自书源（第三方），同样不许打到内网。从前走 Coil 默认的 OkHttp 客户端：
                 // coverUrl 写成 http://192.168.1.1/… 就是一次对路由器后台的盲 GET —— 不少路由器的
                 // 改设置接口就是 GET。装上与书源抓取同一套拦截（手动加的组件优先于自动加载的那个）
-                add(OkHttpNetworkFetcherFactory(callFactory = { OkHttpClient.Builder().guardPrivateNetwork().build() }))
+                add(
+                    OkHttpNetworkFetcherFactory(
+                        callFactory = {
+                            OkHttpClient.Builder()
+                                .guardPrivateNetwork()
+                                // 封面防盗链：很多站（MissAV、多数视频站）只认自己域名来的图片请求，
+                                // 不带 Referer 一律 403 —— 界面上就是一整块占位色加两个字。
+                                // 用图片自己的 origin 当 Referer：和浏览器行为一致，也不用逐个源配 header。
+                                .addInterceptor { chain ->
+                                    val req = chain.request()
+                                    val origin = req.url.let { it.scheme + "://" + it.host + (if (it.port > 0 && it.port != it.defaultPort) ":" + it.port else "") }
+                                    chain.proceed(
+                                        req.newBuilder()
+                                            .header("Referer", origin + "/")
+                                            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                                            .build(),
+                                    )
+                                }
+                                .build()
+                        },
+                    ),
+                )
             }
             .build()
 
