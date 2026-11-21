@@ -169,7 +169,7 @@ fun PlayerScreen(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .onPreviewKeyEvent { ev ->
+            .onPreviewKeyEvent { ev: androidx.compose.ui.input.key.KeyEvent ->
                 // 音量键调播放音量：视频里最顺手的调音量方式，别让人去划屏幕
                 if (ev.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
                     when (ev.key) {
