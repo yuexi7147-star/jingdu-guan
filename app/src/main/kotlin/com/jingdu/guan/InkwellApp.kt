@@ -56,7 +56,7 @@ class InkwellApp : Application(), SingletonImageLoader.Factory {
                 val sw = java.io.StringWriter()
                 error.printStackTrace(java.io.PrintWriter(sw))
                 val ts = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
-                f.appendText("===== " + ts + " =====" + NL + sw.toString() + NL)
+                f.appendText("===== " + ts + " =====" + "\n" + sw.toString() + "\n")
             }
             previous?.uncaughtException(thread, error)
         }
