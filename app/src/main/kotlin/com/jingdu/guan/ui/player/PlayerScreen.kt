@@ -79,6 +79,8 @@ fun PlayerScreen(
     var dragAccum by remember { mutableFloatStateOf(0f) }
     var startPosMs by remember { mutableLongStateOf(0L) }
     var controlsShown by remember { mutableStateOf(true) }
+    // 拖动进度时只动这个，松手才 seek —— 每帧 seek 会把播放器拖卡
+    var seekPreview by remember { mutableStateOf<Long?>(null) }
     var fullscreen by remember { mutableStateOf(false) }
 
     // 全屏：切横屏 + 隐藏系统栏；退出时恢复
@@ -221,7 +223,12 @@ fun PlayerScreen(
                 .pointerInput(state.url) {
                     detectDragGestures(
                         onDragStart = { dragAccum = 0f; startPosMs = player.currentPosition },
-                        onDragEnd = { hud = null },
+                        onDragEnd = {
+                            // 手指抬起才 seek 一次，拖动过程中播放器完全不动
+                            seekPreview?.let { player.seekTo(it) }
+                            seekPreview = null
+                            hud = null
+                        },
                         onDrag = { change, drag ->
                             change.consume()
                             dragAccum += drag.x
@@ -300,13 +307,14 @@ fun PlayerScreen(
                 Spacer(Modifier.height(Dimens.gapS))
 
                 // 进度
+                val shownPos = seekPreview ?: state.positionMs
                 DeterminateProgressBar(
-                    progress = if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f,
+                    progress = if (state.durationMs > 0) shownPos.toFloat() / state.durationMs else 0f,
                 )
                 Spacer(Modifier.height(Dimens.gapXS))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
-                        formatTime(state.positionMs) + " / " + formatTime(state.durationMs),
+                        formatTime(seekPreview ?: state.positionMs) + " / " + formatTime(state.durationMs),
                         style = MiuixTheme.textStyles.footnote1,
                         color = Color.White.copy(alpha = 0.85f),
                     )
