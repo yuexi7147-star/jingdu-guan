@@ -85,7 +85,7 @@ class BookmarkViewModel(private val dao: BookmarkDao) : ViewModel() {
             conn.disconnect()
         }
 
-        val title = Regex("<title[^>]*>(.*?)</title>", RegexOption.IGNORE_CASE or RegexOption.DOT_MATCHES_ALL)
+        val title = Regex("<title[^>]*>(.*?)</title>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
             .find(html)?.groupValues?.getOrNull(1)?.trim()?.replace(Regex("\\s+"), " ")?.take(60).orEmpty()
         val icon = Regex("<link[^>]+rel=[\"'](?:icon|shortcut icon)[\"'] [^>]*>", RegexOption.IGNORE_CASE)
             .find(html)?.value?.let { tag ->

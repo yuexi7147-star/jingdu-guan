@@ -179,7 +179,7 @@ class InkwellApp : Application(), SingletonImageLoader.Factory {
                                 // 用图片自己的 origin 当 Referer：和浏览器行为一致，也不用逐个源配 header。
                                 .addInterceptor { chain ->
                                     val req = chain.request()
-                                    val origin = req.url.let { it.scheme + "://" + it.host + (if (it.port > 0 && it.port != it.defaultPort) ":" + it.port else "") }
+                                    val origin = req.url.let { it.scheme + "://" + it.host + (if (it.port > 0) ":" + it.port else "") }
                                     chain.proceed(
                                         req.newBuilder()
                                             .header("Referer", origin + "/")

@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.bookmark
 
+import top.yukonga.miuix.kmp.icon.extended.SearchDevice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -85,9 +86,9 @@ fun BookmarkScreen(
         if (list.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding)) {
                 EmptyState(
+                    icon = MiuixIcons.SearchDevice,
                     title = "还没有书签",
-                    hint = "点右上角 ＋ 把常去的站存进来；
-点一下就进网页，视频能直接抓出来播",
+                    hint = "点右上角 ＋ 把常去的站存进来",
                 )
             }
         } else {
