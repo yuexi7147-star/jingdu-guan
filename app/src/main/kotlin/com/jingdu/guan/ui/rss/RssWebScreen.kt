@@ -312,7 +312,6 @@ fun RssWebScreen(
                                             tint = MiuixTheme.colorScheme.onPrimary,
                                         )
                                     }
-                                    )
                                 }
                             }
                         }
