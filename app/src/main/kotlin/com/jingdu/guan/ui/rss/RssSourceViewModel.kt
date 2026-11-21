@@ -333,32 +333,38 @@ class RssSourceViewModel(
      *
      * 先直连试试（很多站给的就是 feed 地址）；不成就当网页、去找它的 feed。
      */
+    /**
+     * 一键转源：给个网址就做成来源。
+     *
+     * 两条路，按顺序试：
+     * 1. 它本身是 RSS/Atom（或源合集）→ 正常导入
+     * 2. 不是 → **建成单网页源**（reading 的 singleUrl）：点开就是那个网页，用应用内浏览器看
+     *
+     * 第 2 条是关键：绝大多数想收进来的站（视频站、资料站）根本没有 RSS，
+     * 以前到这一步就报「这个地址既不是 feed」，等于这个功能对它们完全没用。
+     */
     fun createFromUrl(rawUrl: String, onDone: (String) -> Unit) {
         val url = rawUrl.trim()
         if (url.isBlank()) return
+        if (!url.startsWith("http://", true) && !url.startsWith("https://", true)) {
+            onDone("要填 http:// 或 https:// 开头的网址")
+            return
+        }
         viewModelScope.launch {
             try {
-                // 先直接导入：feed 地址一次就成
+                // 1) 先当 feed / 合集试
                 val direct = repo.import(url)
                 if (direct.added > 0) {
-                    onDone("已创建")
+                    onDone("已创建订阅源")
                     return@launch
                 }
-                // 不是 feed：当网页找 feed
-                val feed = com.jingdu.guan.data.source.FeedDiscover.discover(
-                    pageUrl = url,
-                    fetch = { u -> fetchText(u) },
-                    isFeed = { body ->
-                        body.contains("<rss", true) || body.contains("<feed", true) ||
-                            body.contains("<channel", true)
-                    },
-                )
-                if (feed == null) {
-                    onDone("这个站没提供订阅")
-                } else {
-                    val r = repo.import(feed)
-                    onDone(if (r.added > 0) "已创建（" + feed + "）" else "订阅源抓不到内容")
-                }
+
+                // 2) 不是 feed：建成单网页源
+                val name = runCatching {
+                    java.net.URI(url).host?.removePrefix("www.") ?: url
+                }.getOrDefault(url)
+                repo.addSinglePageSource(url = url, name = name)
+                onDone("已创建网页来源：" + name + "（点开直接进网页）")
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 onDone("建不上：" + (e.message?.take(40) ?: "网络错误"))

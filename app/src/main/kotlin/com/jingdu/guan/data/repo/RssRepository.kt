@@ -242,6 +242,23 @@ class RssRepository(
      *
      * 结果不入库 —— 它是「临时看一眼」，塞进 rss_article 会把时间线搅乱。
      */
+    /**
+     * 把一个网址建成单网页来源（reading 的 singleUrl）：点开直接用应用内浏览器打开它。
+     *
+     * 给没有 RSS 的站用的 —— 视频站、资料站、导航站基本都是这种。
+     * 生成的规则 JSON 就是阅读认的最小形状，导出去也能在阅读里用。
+     */
+    suspend fun addSinglePageSource(url: String, name: String) {
+        val json = buildString {
+                append("[{\"sourceName\":\"")
+                append(name.replace("\"", "").take(40))
+                append("\",\"sourceUrl\":\"")
+                append(url.replace("\"", ""))
+                append("\",\"singleUrl\":true,\"enabled\":true,\"type\":0}]")
+            }
+        import(json)
+    }
+
     suspend fun searchInSource(sourceId: String, keyword: String): List<RssArticle> {
         val rule = getRule(sourceId) ?: throw IllegalStateException("订阅源不存在")
         return engine.search(rule, keyword).items
