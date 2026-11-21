@@ -1,5 +1,6 @@
 package com.jingdu.guan.ui.rss
 
+import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Blocklist
 import android.webkit.JsResult
 import androidx.compose.foundation.layout.Arrangement
@@ -289,26 +290,28 @@ fun RssWebScreen(
                                             .weight(1f)
                                             .clickable { onPlay(u, currentUrl, state.title); sniffed.clear() },
                                     )
-                                    Text(
-                                        "外部",
-                                        style = MiuixTheme.textStyles.footnote2,
-                                        color = MiuixTheme.colorScheme.onPrimary,
-                                        modifier = Modifier
-                                            .clickable {
-                                                com.jingdu.guan.data.source.MediaOpenExternal
-                                                    .open(context, u, "用其他应用打开")
-                                            }
-                                            .padding(horizontal = Dimens.gapS),
-                                    Text(
-                                        "下载",
-                                        style = MiuixTheme.textStyles.footnote2,
-                                        color = MiuixTheme.colorScheme.onPrimary,
-                                        modifier = Modifier
-                                            .clickable {
-                                                com.jingdu.guan.data.source.MediaDownloader
-                                                    .enqueue(context, u, currentUrl, state.title)
-                                            }
-                                            .padding(horizontal = Dimens.gapS),
+                                    // 两个动作做成图标按钮：文字「外部」「下载」在深色条上不显眼，
+                                    // 也不像能点的东西
+                                    AppIconButton(onClick = {
+                                        com.jingdu.guan.data.source.MediaOpenExternal
+                                            .open(context, u, "用其他应用打开")
+                                    }) {
+                                        Icon(
+                                            MiuixIcons.Forward,
+                                            contentDescription = "用其他应用打开",
+                                            tint = MiuixTheme.colorScheme.onPrimary,
+                                        )
+                                    }
+                                    AppIconButton(onClick = {
+                                        com.jingdu.guan.data.source.MediaDownloader
+                                            .enqueue(context, u, currentUrl, state.title)
+                                    }) {
+                                        Icon(
+                                            MiuixIcons.Copy,
+                                            contentDescription = "下载这个地址",
+                                            tint = MiuixTheme.colorScheme.onPrimary,
+                                        )
+                                    }
                                     )
                                 }
                             }
