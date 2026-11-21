@@ -122,34 +122,6 @@ fun RssSourceScreen(
     // 搜索框 + 筛选压在标题下面（顶栏的 bottomContent），同来源管理、净化替换。进出多选的两条栏都带上它，栏高不变
     val current = list
     val listHeader: @Composable () -> Unit = {
-        // 检测进度：几百个源要跑几分钟，得让人看见进行到哪、也能停下
-        val checkingNow by viewModel.checking.collectAsStateWithLifecycle()
-        val checkProg by viewModel.checkProgress.collectAsStateWithLifecycle()
-        if (checkingNow) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Dimens.screenPadding, vertical = Dimens.gapS),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            ) {
-                val p = checkProg
-                Text(
-                    text = if (p == null || p.second == 0) "正在检测…"
-                    else "正在检测 " + p.first + " / " + p.second,
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "停止",
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clickable { viewModel.cancelCheck() }
-                        .padding(horizontal = Dimens.gapS, vertical = Dimens.gapXS),
-                )
-            }
-        }
         if (current != null && current.all.isNotEmpty()) {
             ListSearchHeader(
                 query = query,
@@ -193,27 +165,11 @@ fun RssSourceScreen(
             } else AppToolbar(
                 containerColor = pageColor,
                 actions = {
-                    AppIconButton(onClick = { onOpenBookmarks() }) {
-                        Icon(MiuixIcons.SearchDevice, contentDescription = "发现（书签）")
-                    }
-                    // 三个动作必须平铺在 actions 里：Miuix 会把它们排成一条胶囊。
-                    // 之前塞进 Box 是错的 —— Box 是叠放容器，三个按钮全叠在同一个点上（只剩一个影子）。
-                    val checking by viewModel.checking.collectAsStateWithLifecycle()
-                    if (checking) {
-                        AppIconButton(onClick = { viewModel.cancelCheck() }) {
-                            AppLoadingIndicator(size = Dimens.buttonSpinner)
-                        }
-                    } else {
-                        AppIconButton(onClick = { viewModel.checkDead() }) {
-                            Icon(MiuixIcons.Report, contentDescription = "一键检测并删除失效源")
-                        }
-                    }
+                    // 只留「用网址创建」和「＋」。
+                    // 一键检测与发现页（书签）暂时从界面撤下来 —— 两个都还没验证稳，
+                    // 代码留在仓库里，要用的时候把入口接回来即可。
                     AppIconButton(onClick = { showCreate = true }) {
                         Icon(MiuixIcons.Link, contentDescription = "用网址创建订阅源")
-                    }
-                    // 发现：书签集合，点一行直接进网页
-                    AppIconButton(onClick = { onOpenBookmarks() }) {
-                        Icon(MiuixIcons.SearchDevice, contentDescription = "发现（书签）")
                     }
                     Box {
                         // 导入进行中（粘地址要联网抓 feed）换成转圈：从前这个状态 VM 里有、页面从没读过，点了像没点上
@@ -363,17 +319,6 @@ fun RssSourceScreen(
         
     // 一键创建：给网址就做成订阅源
     if (showCreate) {
-            // 检测完：报了失效源就说一声（已经删掉了）
-    val dead by viewModel.deadSources.collectAsStateWithLifecycle()
-    if (dead.isNotEmpty()) {
-        AppAlertDialog(
-            title = "已删除 " + dead.size + " 个失效订阅源",
-            text = dead.take(10).joinToString("、") + if (dead.size > 10) " 等" else "",
-            confirmText = "知道了",
-            onConfirm = { viewModel.clearDeadReport() },
-            onDismissRequest = { viewModel.clearDeadReport() },
-        )
-    }
 
 AppAlertDialog(
             title = "用网址创建订阅源",
