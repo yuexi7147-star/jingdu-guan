@@ -93,6 +93,8 @@ fun RssSourceScreen(
     CollectMessages(viewModel.messages, snackbar)
     CollectExportShares(viewModel.exportFile, chooserTitle = "导出订阅源")
 
+    var showCreate by remember { mutableStateOf(false) }
+    var createUrl by remember { mutableStateOf("") }
     var showImportMenu by remember { mutableStateOf(false) }
     var showUrlImport by remember { mutableStateOf(false) }
     var importText by remember { mutableStateOf("") }
@@ -157,6 +159,14 @@ fun RssSourceScreen(
                 containerColor = pageColor,
                 actions = {
                     Box {
+                        // 一键检测：探活并删掉打不开的源
+                        AppIconButton(onClick = { viewModel.checkDead() }) {
+                            Icon(MiuixIcons.Report, contentDescription = "一键检测失效源")
+                        }
+                        // 一键创建：给网址就做成订阅源
+                        AppIconButton(onClick = { showCreate = true }) {
+                            Icon(MiuixIcons.Link, contentDescription = "用网址创建订阅源")
+                        }
                         // 导入进行中（粘地址要联网抓 feed）换成转圈：从前这个状态 VM 里有、页面从没读过，点了像没点上
                         if (importing) {
                             // 转圈没有名字，读屏只会念「按钮，已停用」：补一句它在干什么
@@ -301,7 +311,43 @@ fun RssSourceScreen(
             showUrlImport = false
             importText = ""
         }
+        
+    // 一键创建：给网址就做成订阅源
+    if (showCreate) {
+            // 检测完：报了失效源就说一声（已经删掉了）
+    val dead by viewModel.deadSources.collectAsStateWithLifecycle()
+    if (dead.isNotEmpty()) {
         AppAlertDialog(
+            title = "已删除 " + dead.size + " 个失效订阅源",
+            message = dead.take(10).joinToString("、") + if (dead.size > 10) " 等" else "",
+            confirmText = "知道了",
+            onConfirm = { viewModel.clearDeadReport() },
+            onDismissRequest = { viewModel.clearDeadReport() },
+        )
+    }
+
+AppAlertDialog(
+            title = "用网址创建订阅源",
+            message = "填网站地址或 feed 地址。填网站会自动找它的订阅入口。",
+            confirmText = "创建",
+            onConfirm = {
+                val u = createUrl.trim()
+                showCreate = false
+                createUrl = ""
+                if (u.isNotEmpty()) viewModel.createFromUrl(u) { msg -> viewModel.messages.emit(msg) }
+            },
+            onDismissRequest = { showCreate = false },
+            content = {
+                CompactTextField(
+                    value = createUrl,
+                    onValueChange = { createUrl = it },
+                    placeholder = "https://example.com",
+                )
+            },
+        )
+    }
+
+AppAlertDialog(
             onDismissRequest = { dismissUrlImport() },
             title = "添加订阅源",
             confirmText = "添加",

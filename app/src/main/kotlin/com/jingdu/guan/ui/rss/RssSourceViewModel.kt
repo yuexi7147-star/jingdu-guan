@@ -233,4 +233,116 @@ class RssSourceViewModel(
             }
         }
     }
+
+    /** 一键检测：正在跑 */
+    private val _checking = MutableStateFlow(false)
+    val checking: StateFlow<Boolean> = _checking
+
+    /** 一键检测的结果：失效源的名字 */
+    private val _deadSources = MutableStateFlow<List<String>>(emptyList())
+    val deadSources: StateFlow<List<String>> = _deadSources
+
+    /**
+     * 一键检测：逐个探活，把打不开的源删掉。
+     *
+     * 只查启用的 —— 关着的源本来就不参与渲染，删不删由用户在列表里自己决定。
+     * 判定用 HTTP 状态码 + 是否拿到正文：只看状态码会被「随便什么路径都回 200」的站骗过。
+     */
+    fun checkDead() {
+        if (_checking.value) return
+        viewModelScope.launch {
+            _checking.value = true
+            val names = mutableListOf<String>()
+            val ids = mutableListOf<String>()
+            try {
+                val all = repo.sources.first().filter { it.enabled }
+                for (src in all) {
+                    val ok = probe(src.url)
+                    if (!ok) {
+                        names.add(src.name)
+                        ids.add(src.id)
+                    }
+                }
+                if (ids.isNotEmpty()) {
+                    repo.delete(ids)
+                }
+                _deadSources.value = names
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            } finally {
+                _checking.value = false
+            }
+        }
+    }
+
+    fun clearDeadReport() { _deadSources.value = emptyList() }
+
+    /** 探活：能不能打开、有没有正文 */
+    private suspend fun probe(url: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 6000
+                readTimeout = 6000
+                instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14)")
+            }
+            val code = conn.responseCode
+            val len = conn.contentLengthLong
+            conn.disconnect()
+            code in 200..399 && (len != 0L)
+        }.getOrDefault(false)
+    }
+
+    /**
+     * 一键创建：给个网址就做成订阅源。
+     *
+     * 先直连试试（很多站给的就是 feed 地址）；不成就当网页、去找它的 feed。
+     */
+    fun createFromUrl(rawUrl: String, onDone: (String) -> Unit) {
+        val url = rawUrl.trim()
+        if (url.isBlank()) return
+        viewModelScope.launch {
+            try {
+                // 先直接导入：feed 地址一次就成
+                val direct = repo.import(url)
+                if (direct.added > 0) {
+                    onDone("已创建")
+                    return@launch
+                }
+                // 不是 feed：当网页找 feed
+                val feed = com.jingdu.guan.data.source.FeedDiscover.discover(
+                    pageUrl = url,
+                    fetch = { u -> fetchText(u) },
+                    isFeed = { body ->
+                        body.contains("<rss", true) || body.contains("<feed", true) ||
+                            body.contains("<channel", true)
+                    },
+                )
+                if (feed == null) {
+                    onDone("这个站没提供订阅")
+                } else {
+                    val r = repo.import(feed)
+                    onDone(if (r.added > 0) "已创建（" + feed + "）" else "订阅源抓不到内容")
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onDone("建不上：" + (e.message?.take(40) ?: "网络错误"))
+            }
+        }
+    }
+
+    private suspend fun fetchText(url: String): String = withContext(Dispatchers.IO) {
+        val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+            connectTimeout = 8000
+            readTimeout = 8000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14)")
+        }
+        try {
+            conn.inputStream.bufferedReader().use { it.readText().take(400_000) }
+        } finally {
+            conn.disconnect()
+        }
+    }
 }
